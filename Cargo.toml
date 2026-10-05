@@ -4,4 +4,6 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
+arrow = "60.0.0"
 egui = "0.36.2"
+parquet = "60.0.0"
