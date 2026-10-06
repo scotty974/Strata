@@ -53,16 +53,16 @@ mod tests {
     use super::*;
 
     #[test]
-    fn check_reader(){
-        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\simple-users.parquet");
-        let result = reader_metadata(&path);
-        assert!(result.is_ok());
+    fn check_reader_metdata(){
+        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\titanic.parquet");
+        reader_metadata(&path).expect("Cannot read the metadata");
+
     }
 
     #[test]
     fn check_read_row(){
-        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\simple-users.parquet");
-        let result = read_rows(&path, 5);
-        assert!(result.is_ok())
+        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\titanic.parquet");
+        read_rows(&path, 5).expect("Error during the reading of rows");
     }
+
 }
