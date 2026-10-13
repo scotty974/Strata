@@ -5,5 +5,5 @@
 - [x] Lire les métadonnées, et les afficher
 - [x] Lire quelques lignes et les afficher
 - [ ] Gérer les erreurs (fichiers absent, fichier qui n'est pas un parquet)
-- [ ] Faire le system d'indexation des fichiers
+- [x] Faire le system d'indexation des fichiers
 - [ ] Faire l'interface pour drag and drop file

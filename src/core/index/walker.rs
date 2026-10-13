@@ -1,17 +1,12 @@
-use std::path::{Path, PathBuf};
+//! Parcours parallèle du disque pour construire l'index.
+
+use std::path::Path;
 use std::sync::atomic::{AtomicUsize, Ordering};
 use std::sync::mpsc;
 
 use ignore::{DirEntry, WalkBuilder, WalkState};
 
-/// Un fichier indexé : nom en minuscules (pour la recherche) et chemin complet.
-#[derive(Debug, Clone)]
-pub struct IndexedFile {
-    pub name_lower: String,
-    pub path: PathBuf,
-}
-
-pub type FileIndex = Vec<IndexedFile>;
+use super::{FileIndex, IndexedFile};
 
 /// Résultat de l'indexation : les fichiers et le nombre d'entrées illisibles.
 pub struct IndexReport {
@@ -49,7 +44,7 @@ fn keep_entry(entry: &DirEntry) -> bool {
 }
 
 /// Parcourt `root` en parallèle et renvoie tous les fichiers (pas les dossiers).
-pub fn indexing_file(root: &Path) -> IndexReport {
+pub fn build_index(root: &Path) -> IndexReport {
     let (tx, rx) = mpsc::channel::<IndexedFile>();
     let errors = AtomicUsize::new(0);
 
@@ -91,5 +86,26 @@ pub fn indexing_file(root: &Path) -> IndexReport {
     IndexReport {
         files: rx.into_iter().collect(),
         errors: errors.into_inner(),
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use std::fs;
+
+    #[test]
+    fn indexe_les_fichiers_et_ignore_les_dossiers_exclus() {
+        let dir = std::env::temp_dir().join("strata_walker_test");
+        let _ = fs::remove_dir_all(&dir);
+        fs::create_dir_all(dir.join("data")).unwrap();
+        fs::create_dir_all(dir.join("node_modules")).unwrap();
+        fs::write(dir.join("data").join("Ventes.parquet"), b"x").unwrap();
+        fs::write(dir.join("node_modules").join("lib.js"), b"x").unwrap();
+
+        let report = build_index(&dir);
+
+        assert_eq!(report.files.len(), 1);
+        assert_eq!(report.files[0].name_lower, "ventes.parquet");
     }
 }
