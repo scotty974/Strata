@@ -5,8 +5,11 @@ edition = "2024"
 
 [dependencies]
 arrow = "60.0.0"
+ignore = "0.4.33"
+mutex = "1.0.2"
 parquet = "60.0.0"
 slint = "1.18.1"
+walkdir = "2.5.0"
 
 
 [build-dependencies]
