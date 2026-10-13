@@ -1,0 +1,208 @@
+// titlebar.slint : barre de titre personnalisée de Seek (fenêtre no-frame)
+import { Palette } from "std-widgets.slint";
+
+global Theme {
+    in-out property <bool> dark: Palette.color-scheme == ColorScheme.dark;
+
+    out property <color> surface:     dark ? #161619 : #ffffff;
+    out property <color> surface-2:   dark ? #1e1e22 : #efefec;
+    out property <color> border:      dark ? #2a2a2f : #e3e3df;
+    out property <color> ink:         dark ? #ededef : #18181b;
+    out property <color> ink-muted:   dark ? #9b9ba4 : #64646b;
+    out property <color> accent:      dark ? #3cc9a6 : #0b7a64;
+    out property <color> accent-ink:  dark ? #06231c : #ffffff;
+    out property <color> close-hover: #c42b1c;
+
+    out property <length> titlebar-height: 44px;
+    out property <length> radius-sm: 6px;
+    out property <length> radius-md: 8px;
+    out property <length> space-2: 8px;
+    out property <length> space-3: 12px;
+    out property <length> space-4: 16px;
+
+    out property <string> font-sans: "Inter";
+    out property <string> font-mono: "JetBrains Mono";
+}
+
+component Icon inherits Path {
+    in property <string> data;
+    in property <color> tint: Theme.ink-muted;
+    width: 16px;
+    height: 16px;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    commands: data;
+    stroke: tint;
+    stroke-width: 1.7px;
+    fill: transparent;
+}
+
+component CaptionButton inherits Rectangle {
+    in property <string> icon;
+    in property <bool> danger: false;
+    callback clicked;
+
+    width: 46px;
+    height: Theme.titlebar-height;
+    background: touch.pressed ? (danger ? Theme.close-hover.darker(15%) : Theme.border)
+              : touch.has-hover ? (danger ? Theme.close-hover : Theme.surface-2)
+              : transparent;
+    animate background { duration: 80ms; }
+
+    Icon {
+        data: icon;
+        stroke-width: 1.2px;
+        tint: (danger && touch.has-hover) ? #ffffff : Theme.ink-muted;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component SearchTrigger inherits Rectangle {
+    in property <string> placeholder: "Rechercher fichiers, contenu, colonnes…";
+    callback clicked;
+
+    height: 30px;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: touch.has-hover ? Theme.ink-muted : Theme.border;
+    background: Theme.surface-2;
+
+    HorizontalLayout {
+        padding-left: Theme.space-3;
+        padding-right: Theme.space-2;
+        spacing: Theme.space-2;
+
+        Icon {
+            y: (parent.height - self.height) / 2;
+            width: 14px;
+            height: 14px;
+            data: "M 11 4 A 7 7 0 1 0 11 18 A 7 7 0 1 0 11 4 Z M 20 20 L 16.5 16.5";
+        }
+        Text {
+            horizontal-stretch: 1;
+            vertical-alignment: center;
+            text: placeholder;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: 13px;
+            overflow: elide;
+        }
+        Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: kbd.preferred-width + 12px;
+            height: 18px;
+            border-radius: 5px;
+            border-width: 1px;
+            border-color: Theme.border;
+            background: Theme.surface;
+            kbd := Text {
+                text: "Ctrl K";
+                color: Theme.ink-muted;
+                font-family: Theme.font-mono;
+                font-size: 11px;
+            }
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component TitleBar inherits Rectangle {
+    in property <string> app-name: "Seek";
+    in property <string> section: "";
+    in property <bool> maximized: false;
+
+    callback toggle-maximize();
+    callback minimize();
+    callback close();
+    callback search-requested();
+
+    height: Theme.titlebar-height;
+    background: Theme.surface;
+
+    // Zone de déplacement, sous les contrôles
+    WindowMoveArea {
+    TouchArea {
+        double-clicked => { root.toggle-maximize(); }
+    }
+}
+
+    HorizontalLayout {
+        padding-left: Theme.space-4;
+        spacing: Theme.space-3;
+
+        HorizontalLayout {
+            spacing: Theme.space-2;
+            alignment: start;
+            Rectangle {
+                y: (parent.height - self.height) / 2;
+                width: 22px;
+                height: 22px;
+                border-radius: Theme.radius-sm;
+                background: Theme.accent;
+                Icon {
+                    width: 13px;
+                    height: 13px;
+                    stroke-width: 2px;
+                    tint: Theme.accent-ink;
+                    data: "M 11 4 A 7 7 0 1 0 11 18 A 7 7 0 1 0 11 4 Z M 20 20 L 16.5 16.5";
+                }
+            }
+            Text {
+                vertical-alignment: center;
+                text: app-name;
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: 13px;
+                font-weight: 600;
+            }
+            if section != "": Text {
+                vertical-alignment: center;
+                text: "/ " + section;
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: 13px;
+            }
+        }
+
+        Rectangle { horizontal-stretch: 1; }
+        SearchTrigger {
+            y: (parent.height - self.height) / 2;
+            min-width: 240px;
+            max-width: 520px;
+            horizontal-stretch: 3;
+            clicked => { root.search-requested(); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+
+        HorizontalLayout {
+            CaptionButton {
+                icon: "M 6 12 L 18 12";
+                clicked => { root.minimize(); }
+            }
+            CaptionButton {
+                icon: maximized
+                    ? "M 8 8 L 8 6 L 18 6 L 18 16 L 16 16 M 6 8 L 16 8 L 16 18 L 6 18 Z"
+                    : "M 6 6 L 18 6 L 18 18 L 6 18 Z";
+                clicked => { root.toggle-maximize(); }
+            }
+            CaptionButton {
+                icon: "M 6 6 L 18 18 M 18 6 L 6 18";
+                danger: true;
+                clicked => { root.close(); }
+            }
+        }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+}

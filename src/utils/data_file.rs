@@ -1,5 +1,4 @@
 use std::fs::File;
-use std::io::{BufReader, Read};
 use std::sync::Arc;
 use parquet::schema::types::Type;
 use parquet::file::reader::{FileReader, SerializedFileReader};
@@ -54,14 +53,14 @@ mod tests {
 
     #[test]
     fn check_reader_metdata(){
-        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\titanic.parquet");
+        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\sample-large.parquet");
         reader_metadata(&path).expect("Cannot read the metadata");
 
     }
 
     #[test]
     fn check_read_row(){
-        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\titanic.parquet");
+        let path = String::from(r"c:\Users\FabienETHEVE\Downloads\sample-large.parquet");
         read_rows(&path, 5).expect("Error during the reading of rows");
     }
 

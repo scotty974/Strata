@@ -1,0 +1,27 @@
+import { Button, VerticalBox, LineEdit } from "std-widgets.slint";
+import {TitleBar} from "components/title_bar_custom.slint";
+import {SideBar} from "components/side-bar.slint";
+
+
+
+export component Home inherits Window {
+    background: white;
+    no-frame: true;
+    title: "Strata";
+    default-font-family: "Inter";
+
+    VerticalLayout {
+    TitleBar {maximized: root.maximized;
+    toggle-maximize => { root.maximized = !root.maximized; }
+    minimize => { root.minimized = true; }
+    close => { root.close(); }}
+    
+    HorizontalLayout {
+        alignment: space-between;
+        SideBar {}
+    }
+    
+    }
+
+}
+
