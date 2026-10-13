@@ -1,0 +1,47 @@
+// Types partagés entre l'interface et Rust.
+// Chaque struct exportée devient une struct Rust du même nom (en snake_case pour les champs),
+// chaque tableau [T] devient un slint::ModelRc<T>.
+
+export enum Page { home, studio, search, agent, settings }
+
+// Vue affichée dans Data Studio
+export enum StudioView { data, schema, metadata }
+
+// Famille de fichier : pilote la couleur de la pastille.
+// Valeurs attendues : "data" (parquet, csv, arrow, json, xlsx), "doc", "pdf", "code", "image".
+export struct FileTab {
+    name: string,       // ex. "ventes_2026.parquet"
+    path: string,       // chemin complet, affiché au survol / dans les métadonnées
+    kind: string,       // "parquet" | "csv" | "arrow" | "json" ...
+}
+
+export struct ColumnInfo {
+    name: string,
+    data-type: string,   // type affiché tel quel : "int64", "utf8", "date32", "double"...
+    nullable: bool,
+    null-ratio: float,   // 0.0 à 1.0, part de valeurs nulles (barre warn dans le schéma)
+    summary: string,     // ligne libre sous le nom : "6 valeurs distinctes", "min 1 · max 420"...
+}
+
+export struct KeyValue {
+    key: string,
+    value: string,
+}
+
+export struct RecentFile {
+    name: string,
+    path: string,
+    kind: string,       // extension sans le point : "parquet", "csv"...
+    size: string,       // déjà formaté : "48,2 Mo"
+    modified: string,   // déjà formaté : "il y a 2 h"
+}
+
+export struct SearchHit {
+    name: string,
+    path: string,
+    kind: string,
+    family: string,     // "data" | "doc" | "pdf" | "code" | "image"
+    size: string,
+    modified: string,
+    snippet: string,    // extrait du contenu, vide si correspondance sur le nom
+}

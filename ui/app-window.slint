@@ -1,27 +1,129 @@
-import { Button, VerticalBox, LineEdit } from "std-widgets.slint";
-import {TitleBar} from "components/title_bar_custom.slint";
-import {SideBar} from "components/side-bar.slint";
+// Fenêtre principale de Strata.
+// Toute la donnée passe par les globals de state.slint (voir docs/UI.md).
+import { Theme, Icons } from "theme.slint";
+import { Page } from "types.slint";
+import { AppState, HomeState, StudioState, SearchState } from "state.slint";
+import { TitleBar } from "components/title_bar_custom.slint";
+import { SideBar } from "components/side-bar.slint";
+import { StatusBar, ErrorBanner } from "components/common.slint";
+import { HomePage } from "pages/home_page.slint";
+import { StudioPage } from "pages/studio_page.slint";
+import { SearchPage } from "pages/search_page.slint";
+import { PlaceholderPage } from "pages/placeholder_page.slint";
 
+// Rendus accessibles depuis Rust : ui.global::<StudioState>(), ColumnInfo { .. }, etc.
+export { Theme, AppState, HomeState, StudioState, SearchState }
+export { Page, StudioView, FileTab, ColumnInfo, KeyValue, RecentFile, SearchHit } from "types.slint";
 
-
-export component Home inherits Window {
-    background: white;
-    no-frame: true;
-    title: "Strata";
-    default-font-family: "Inter";
-
-    VerticalLayout {
-    TitleBar {maximized: root.maximized;
-    toggle-maximize => { root.maximized = !root.maximized; }
-    minimize => { root.minimized = true; }
-    close => { root.close(); }}
-    
-    HorizontalLayout {
-        alignment: space-between;
-        SideBar {}
+// Poignée de redimensionnement invisible (bords et coins de la fenêtre sans cadre)
+component ResizeHandle inherits TouchArea {
+    in property <string> edge;
+    pointer-event(event) => {
+        if (event.button == PointerEventButton.left && event.kind == PointerEventKind.down) {
+            AppState.start-resize(edge);
+        }
     }
-    
-    }
-
 }
 
+export component Home inherits Window {
+    background: Theme.bg;
+    no-frame: true;
+    title: "Strata";
+    default-font-family: Theme.font-sans;
+    preferred-width: 1280px;
+    preferred-height: 800px;
+    min-width: 560px;
+    min-height: 420px;
+
+    property <string> section: AppState.page == Page.studio ? "Data Studio"
+                             : AppState.page == Page.search ? "Recherche"
+                             : AppState.page == Page.agent ? "Agent"
+                             : AppState.page == Page.settings ? "Paramètres"
+                             : "";
+
+    init => { keys.focus(); }
+
+    // Raccourcis globaux
+    keys := FocusScope {
+        key-pressed(event) => {
+            if (event.modifiers.control && (event.text == "k" || event.text == "K")) {
+                AppState.page = Page.search;
+                AppState.search-requested();
+                return accept;
+            }
+            if (event.modifiers.control && (event.text == "o" || event.text == "O")) {
+                AppState.open-file-dialog();
+                return accept;
+            }
+            reject
+        }
+
+        VerticalLayout {
+            TitleBar {
+                section: root.section;
+                maximized: root.maximized;
+                toggle-maximize => { root.maximized = !root.maximized; }
+                minimize => { root.minimized = true; }
+                close => { root.close(); }
+                search-requested => {
+                    AppState.page = Page.search;
+                    AppState.search-requested();
+                }
+            }
+
+            if AppState.error-text != "": ErrorBanner {
+                text: AppState.error-text;
+                dismissed => { AppState.error-text = ""; }
+            }
+
+            HorizontalLayout {
+                vertical-stretch: 1;
+                SideBar { }
+                Rectangle {
+                    horizontal-stretch: 1;
+                    if AppState.page == Page.home: HomePage { }
+                    if AppState.page == Page.studio: StudioPage { }
+                    if AppState.page == Page.search: SearchPage {
+                        init => { self.focus-input(); }
+                    }
+                    if AppState.page == Page.agent: PlaceholderPage {
+                        icon: Icons.spark;
+                        title: "Agent local";
+                        message: "Bientôt : posez des questions sur vos fichiers à un modèle qui tourne sur votre machine.";
+                    }
+                    if AppState.page == Page.settings: PlaceholderPage {
+                        icon: Icons.settings;
+                        title: "Paramètres";
+                        message: "Dossiers indexés, moteur SQL, thème.";
+                    }
+                }
+            }
+
+            StatusBar {
+                left: AppState.status-text;
+                middle: StudioState.tabs.length > 0 && StudioState.active-tab >= 0 && StudioState.active-tab < StudioState.tabs.length
+                    ? StudioState.tabs[StudioState.active-tab].path : "";
+                right: AppState.engine-text;
+                busy: AppState.busy;
+            }
+        }
+    }
+
+    // Bordure fine (masquée quand la fenêtre est agrandie)
+    Rectangle {
+        border-width: root.maximized ? 0px : 1px;
+        border-color: Theme.border;
+    }
+
+    // Poignées de redimensionnement (6px), inactives quand la fenêtre est agrandie.
+    // Elles appellent AppState.start-resize(edge) : à brancher en Rust sur drag_resize_window().
+    property <length> grip: 6px;
+    if !root.maximized: ResizeHandle { x: grip; y: 0; width: parent.width - 2 * grip; height: grip; edge: "n"; mouse-cursor: ns-resize; }
+    if !root.maximized: ResizeHandle { x: grip; y: parent.height - grip; width: parent.width - 2 * grip; height: grip; edge: "s"; mouse-cursor: ns-resize; }
+    if !root.maximized: ResizeHandle { x: 0; y: grip; width: grip; height: parent.height - 2 * grip; edge: "w"; mouse-cursor: ew-resize; }
+    if !root.maximized: ResizeHandle { x: parent.width - grip; y: grip; width: grip; height: parent.height - 2 * grip; edge: "e"; mouse-cursor: ew-resize; }
+    if !root.maximized: ResizeHandle { x: 0; y: 0; width: grip; height: grip; edge: "nw"; mouse-cursor: nwse-resize; }
+    if !root.maximized: ResizeHandle { x: parent.width - grip; y: parent.height - grip; width: grip; height: grip; edge: "se"; mouse-cursor: nwse-resize; }
+    if !root.maximized: ResizeHandle { x: parent.width - grip; y: 0; width: grip; height: grip; edge: "ne"; mouse-cursor: nesw-resize; }
+    if !root.maximized: ResizeHandle { x: 0; y: parent.height - grip; width: grip; height: grip; edge: "sw"; mouse-cursor: nesw-resize; }
+}

@@ -1,0 +1,257 @@
+// Composants de structure : onglets de fichiers, zone de dépôt, état vide, barre d'état, bandeau d'erreur.
+import { Theme, Icons } from "../theme.slint";
+import { Icon, Button, ButtonVariant, Kbd, BusyDot } from "primitives.slint";
+import { FileTab } from "../types.slint";
+
+// ---------------------------------------------------------------- Onglets de fichiers
+component FileTabItem inherits Rectangle {
+    in property <FileTab> tab;
+    in property <bool> active;
+    callback clicked;
+    callback close-clicked;
+
+    height: 32px;
+    min-width: tab-layout.preferred-width;
+    max-width: 260px;
+    border-radius: Theme.radius-sm;
+    background: active ? Theme.surface : (t.has-hover ? Theme.surface.transparentize(50%) : transparent);
+    border-width: active ? 1px : 0px;
+    border-color: Theme.border;
+
+    t := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+
+    tab-layout := HorizontalLayout {
+        padding-left: Theme.space-3;
+        padding-right: 6px;
+        spacing: Theme.space-2;
+        Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: 7px; height: 7px;
+            border-radius: 4px;
+            background: Theme.ft-data;
+        }
+        Text {
+            text: tab.name;
+            color: active ? Theme.ink : Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            font-weight: active ? 500 : 400;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: 20px; height: 20px;
+            border-radius: 4px;
+            background: xt.has-hover ? Theme.border : transparent;
+            Icon { size: 12px; data: Icons.x; opacity: (active || t.has-hover || xt.has-hover) ? 1 : 0.4; }
+            xt := TouchArea {
+                mouse-cursor: pointer;
+                clicked => { root.close-clicked(); }
+            }
+        }
+    }
+}
+
+export component FileTabs inherits Rectangle {
+    in property <[FileTab]> tabs;
+    in-out property <int> active: -1;
+    callback selected(index: int);
+    callback closed(index: int);
+    callback add-clicked;
+
+    height: 44px;
+    background: Theme.surface-2;
+
+    HorizontalLayout {
+        padding-left: Theme.space-3;
+        padding-right: Theme.space-3;
+        spacing: 4px;
+        alignment: start;
+        for tab[i] in tabs: FileTabItem {
+            y: (parent.height - self.height) / 2;
+            tab: tab;
+            active: i == root.active;
+            clicked => {
+                root.active = i;
+                root.selected(i);
+            }
+            close-clicked => { root.closed(i); }
+        }
+        Button {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.plus;
+            variant: ButtonVariant.ghost;
+            clicked => { root.add-clicked(); }
+        }
+    }
+    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+}
+
+// ---------------------------------------------------------------- Zone de dépôt
+export component DropZone inherits Rectangle {
+    in property <bool> hover: false;           // fichier survolé (piloté par Rust)
+    in property <string> title: "Déposez un fichier Parquet, Arrow ou CSV";
+    in property <string> subtitle: "ou ouvrez-le depuis votre ordinateur";
+    callback browse-clicked;
+
+    min-height: 200px;
+    border-radius: Theme.radius-lg;
+    border-width: hover ? 2px : 1px;
+    border-color: hover ? Theme.accent : Theme.border-strong.transparentize(40%);
+    background: hover ? Theme.accent-soft : Theme.surface;
+    animate background, border-color { duration: 120ms; }
+
+    VerticalLayout {
+        alignment: center;
+        spacing: Theme.space-3;
+        padding: Theme.space-6;
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 48px; height: 48px;
+                border-radius: Theme.radius-lg;
+                background: hover ? Theme.accent : Theme.surface-2;
+                Icon { size: 24px; data: Icons.upload; tint: hover ? Theme.accent-ink : Theme.accent; }
+            }
+        }
+        Text {
+            horizontal-alignment: center;
+            text: title;
+            color: Theme.ink;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-heading;
+            font-weight: 600;
+        }
+        Text {
+            horizontal-alignment: center;
+            text: subtitle;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-body;
+        }
+        HorizontalLayout {
+            alignment: center;
+            spacing: Theme.space-2;
+            Button {
+                text: "Parcourir…";
+                icon: Icons.folder;
+                clicked => { root.browse-clicked(); }
+            }
+            Kbd { y: (parent.height - self.height) / 2; text: "Ctrl O"; }
+        }
+    }
+}
+
+// ---------------------------------------------------------------- État vide générique
+export component EmptyState inherits Rectangle {
+    in property <string> icon: Icons.info;
+    in property <string> title;
+    in property <string> message;
+    VerticalLayout {
+        alignment: center;
+        spacing: Theme.space-2;
+        HorizontalLayout {
+            alignment: center;
+            Rectangle {
+                width: 40px; height: 40px;
+                border-radius: Theme.radius-md;
+                background: Theme.surface-2;
+                Icon { size: 20px; data: icon; }
+            }
+        }
+        Text {
+            horizontal-alignment: center;
+            text: title;
+            color: Theme.ink;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-heading;
+            font-weight: 600;
+        }
+        Text {
+            horizontal-alignment: center;
+            text: message;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-body;
+            wrap: word-wrap;
+        }
+    }
+}
+
+// ---------------------------------------------------------------- Barre d'état
+export component StatusBar inherits Rectangle {
+    in property <string> left;
+    in property <string> middle;
+    in property <string> right;
+    in property <bool> busy;
+
+    height: 28px;
+    background: Theme.surface;
+    Rectangle { y: 0; height: 1px; background: Theme.border; }
+
+    HorizontalLayout {
+        padding-left: Theme.space-4;
+        padding-right: Theme.space-4;
+        spacing: Theme.space-4;
+        if busy: BusyDot { y: (parent.height - self.height) / 2; }
+        Text {
+            text: left;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            horizontal-stretch: 1;
+            text: middle;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            text: right;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+        }
+    }
+}
+
+// ---------------------------------------------------------------- Bandeau d'erreur
+export component ErrorBanner inherits Rectangle {
+    in property <string> text;
+    callback dismissed;
+
+    height: 36px;
+    background: Theme.warn-soft;
+    HorizontalLayout {
+        padding-left: Theme.space-4;
+        padding-right: Theme.space-2;
+        spacing: Theme.space-2;
+        Icon { y: (parent.height - self.height) / 2; data: Icons.alert; tint: Theme.danger; }
+        Text {
+            horizontal-stretch: 1;
+            text: root.text;
+            color: Theme.ink;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-body;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Button {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.x;
+            variant: ButtonVariant.ghost;
+            clicked => { root.dismissed(); }
+        }
+    }
+    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+}

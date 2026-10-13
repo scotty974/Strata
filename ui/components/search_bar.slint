@@ -1,0 +1,22 @@
+// Grand champ de recherche (page Recherche). Relaie la saisie à SearchState.
+import { Theme, Icons } from "../theme.slint";
+import { TextField, Kbd } from "primitives.slint";
+
+export component SearchBar inherits Rectangle {
+    in property <string> placeholder: "Nom de fichier, contenu, nom de colonne…";
+    in-out property <string> text;
+    callback edited(text: string);
+    callback accepted(text: string);
+
+    public function focus-input() { field.focus-input(); }
+
+    height: 44px;
+    field := TextField {
+        height: parent.height;
+        icon: Icons.search;
+        placeholder: root.placeholder;
+        text <=> root.text;
+        edited(t) => { root.edited(t); }
+        accepted(t) => { root.accepted(t); }
+    }
+}

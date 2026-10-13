@@ -1,0 +1,140 @@
+// Panneau Schéma : liste des colonnes avec type, nullabilité et profil.
+import { ListView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { SectionLabel } from "primitives.slint";
+import { ColumnInfo, KeyValue } from "../types.slint";
+
+component ColumnRow inherits Rectangle {
+    in property <ColumnInfo> column;
+    in property <bool> selected;
+    callback clicked;
+
+    height: 52px;
+    background: selected ? Theme.accent-soft : (t.has-hover ? Theme.surface-2 : transparent);
+
+    VerticalLayout {
+        padding-left: Theme.space-4;
+        padding-right: Theme.space-4;
+        padding-top: 8px;
+        padding-bottom: 8px;
+        spacing: 4px;
+        HorizontalLayout {
+            spacing: Theme.space-2;
+            Text {
+                horizontal-stretch: 1;
+                text: column.name;
+                color: selected ? Theme.accent-text : Theme.ink;
+                font-family: Theme.font-mono;
+                font-size: Theme.fs-small;
+                overflow: elide;
+            }
+            Text {
+                text: column.nullable ? column.data-type + "?" : column.data-type;
+                color: Theme.ink-muted;
+                font-family: Theme.font-mono;
+                font-size: Theme.fs-label;
+            }
+        }
+        HorizontalLayout {
+            spacing: Theme.space-2;
+            Rectangle {
+                y: (parent.height - self.height) / 2;
+                horizontal-stretch: 1;
+                height: 4px;
+                border-radius: 2px;
+                background: Theme.border;
+                Rectangle {
+                    x: 0;
+                    width: parent.width * clamp(column.null-ratio, 0, 1);
+                    border-radius: 2px;
+                    background: Theme.warn;
+                }
+            }
+            Text {
+                text: column.summary != "" ? column.summary
+                    : column.null-ratio > 0 ? "\{round(column.null-ratio * 1000) / 10} % nuls" : "0 % nuls";
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-label;
+            }
+        }
+    }
+    t := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component SchemaPanel inherits Rectangle {
+    in property <[ColumnInfo]> columns;
+    in property <[KeyValue]> footer;          // 2 à 4 infos clés du fichier
+    in-out property <int> selected-column: -1;
+    callback column-clicked(index: int);
+
+    background: Theme.surface;
+
+    VerticalLayout {
+        HorizontalLayout {
+            height: 44px;
+            padding-left: Theme.space-4;
+            padding-right: Theme.space-4;
+            Text {
+                horizontal-stretch: 1;
+                text: "Schéma";
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-heading;
+                font-weight: 600;
+                vertical-alignment: center;
+            }
+            Text {
+                text: "\{columns.length} colonnes";
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+                vertical-alignment: center;
+            }
+        }
+        Rectangle { height: 1px; background: Theme.border; }
+
+        ListView {
+            vertical-stretch: 1;
+            for col[i] in columns: ColumnRow {
+                column: col;
+                selected: i == root.selected-column;
+                clicked => {
+                    root.selected-column = i;
+                    root.column-clicked(i);
+                }
+            }
+        }
+
+        if footer.length > 0: Rectangle { height: 1px; background: Theme.border; }
+        if footer.length > 0: VerticalLayout {
+            padding: Theme.space-4;
+            spacing: 4px;
+            SectionLabel { text: "FICHIER"; }
+            for kv in footer: HorizontalLayout {
+                spacing: Theme.space-2;
+                Text {
+                    text: kv.key;
+                    color: Theme.ink-muted;
+                    font-family: Theme.font-sans;
+                    font-size: Theme.fs-small;
+                }
+                Text {
+                    horizontal-stretch: 1;
+                    horizontal-alignment: right;
+                    text: kv.value;
+                    color: Theme.ink;
+                    font-family: Theme.font-sans;
+                    font-size: Theme.fs-small;
+                    overflow: elide;
+                }
+            }
+        }
+    }
+
+    // Bord droit
+    Rectangle { x: parent.width - 1px; width: 1px; background: Theme.border; }
+}

@@ -1,0 +1,296 @@
+// Éléments de base : icône, boutons, puces, badges, touches, champ texte.
+import { Theme, Icons } from "../theme.slint";
+
+export enum ButtonVariant { primary, secondary, ghost, danger }
+
+// Icône au trait sur une grille 24x24. `data` vient du global Icons.
+export component Icon inherits Path {
+    in property <string> data;
+    in property <color> tint: Theme.ink-muted;
+    in property <length> size: 16px;
+    width: size;
+    height: size;
+    viewbox-width: 24;
+    viewbox-height: 24;
+    commands: data;
+    stroke: tint;
+    stroke-width: 1.7px;
+    fill: transparent;
+}
+
+export component Button inherits Rectangle {
+    in property <string> text;
+    in property <string> icon;                    // vide = pas d'icône
+    in property <ButtonVariant> variant: ButtonVariant.secondary;
+    in property <bool> enabled: true;
+    in property <string> shortcut;                // ex. "Ctrl ↵", affiché à droite
+    callback clicked;
+
+    property <color> fg: variant == ButtonVariant.primary ? Theme.accent-ink
+                       : variant == ButtonVariant.danger ? Theme.danger
+                       : variant == ButtonVariant.ghost ? Theme.ink-muted
+                       : Theme.ink;
+
+    height: Theme.control-height;
+    min-width: layout.preferred-width;
+    horizontal-stretch: 0;
+    border-radius: Theme.radius-md;
+    border-width: (variant == ButtonVariant.secondary) ? 1px : 0px;
+    border-color: Theme.border;
+    opacity: enabled ? 1 : 0.45;
+    background: variant == ButtonVariant.primary
+        ? (touch.pressed ? Theme.accent.darker(12%) : touch.has-hover ? Theme.accent.darker(6%) : Theme.accent)
+        : variant == ButtonVariant.secondary
+            ? (touch.pressed ? Theme.border : touch.has-hover ? Theme.surface-2 : Theme.surface)
+            : (touch.pressed ? Theme.border : touch.has-hover ? Theme.surface-2 : transparent);
+    animate background { duration: 80ms; }
+
+    layout := HorizontalLayout {
+        padding-left: text == "" ? 7px : Theme.space-3;
+        padding-right: text == "" ? 7px : Theme.space-3;
+        spacing: 6px;
+        alignment: center;
+        if icon != "": Icon {
+            y: (parent.height - self.height) / 2;
+            data: icon;
+            size: 14px;
+            tint: fg;
+        }
+        if text != "": Text {
+            text: root.text;
+            color: fg;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-body;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+        if shortcut != "": Text {
+            text: root.shortcut;
+            color: fg;
+            opacity: 0.7;
+            font-family: Theme.font-mono;
+            font-size: Theme.fs-label;
+            vertical-alignment: center;
+        }
+    }
+
+    touch := TouchArea {
+        enabled: root.enabled;
+        mouse-cursor: root.enabled ? pointer : default;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Puce de filtre ou d'onglet segmenté
+export component Chip inherits Rectangle {
+    in property <string> text;
+    in property <bool> active: false;
+    in property <color> dot: transparent;          // pastille de couleur optionnelle
+    callback clicked;
+
+    height: 26px;
+    min-width: chip-layout.preferred-width;
+    horizontal-stretch: 0;
+    border-radius: Theme.radius-full;
+    border-width: 1px;
+    border-color: active ? Theme.ink : Theme.border;
+    background: active ? Theme.ink : (touch.has-hover ? Theme.surface-2 : Theme.surface);
+
+    chip-layout := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 10px;
+        spacing: 6px;
+        if dot != transparent: Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: 7px; height: 7px;
+            border-radius: 4px;
+            background: dot;
+        }
+        Text {
+            text: root.text;
+            color: active ? Theme.surface : Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            font-weight: 500;
+            vertical-alignment: center;
+        }
+    }
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+// Contrôle segmenté (Données / Schéma / Métadonnées)
+export component Segmented inherits Rectangle {
+    in property <[string]> items;
+    in-out property <int> current: 0;
+    callback changed(index: int);
+
+    height: 28px;
+    min-width: seg.preferred-width;
+    horizontal-stretch: 0;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: Theme.border;
+    clip: true;
+
+    seg := HorizontalLayout {
+        for item[i] in items: Rectangle {
+            min-width: label.preferred-width + 20px;
+            background: i == current ? Theme.surface-2 : (t.has-hover ? Theme.surface-2.transparentize(50%) : transparent);
+            label := Text {
+                text: item;
+                color: i == current ? Theme.ink : Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+                font-weight: 500;
+            }
+            t := TouchArea {
+                mouse-cursor: pointer;
+                clicked => {
+                    root.current = i;
+                    root.changed(i);
+                }
+            }
+        }
+    }
+}
+
+// Badge mono : extension, type de colonne
+export component Badge inherits Rectangle {
+    in property <string> text;
+    in property <bool> accent: false;
+    height: 20px;
+    width: lbl.preferred-width + 14px;
+    horizontal-stretch: 0;
+    border-radius: Theme.radius-sm;
+    background: accent ? Theme.accent-soft : Theme.surface-2;
+    lbl := Text {
+        text: root.text;
+        color: accent ? Theme.accent-text : Theme.ink-muted;
+        font-family: accent ? Theme.font-sans : Theme.font-mono;
+        font-size: Theme.fs-label;
+        font-weight: accent ? 600 : 500;
+    }
+}
+
+// Touche clavier
+export component Kbd inherits Rectangle {
+    in property <string> text;
+    height: 18px;
+    width: k.preferred-width + 12px;
+    border-radius: 5px;
+    border-width: 1px;
+    border-color: Theme.border;
+    background: Theme.surface;
+    k := Text {
+        text: root.text;
+        color: Theme.ink-muted;
+        font-family: Theme.font-mono;
+        font-size: Theme.fs-label;
+    }
+}
+
+// Libellé de section en capitales
+export component SectionLabel inherits Text {
+    color: Theme.ink-muted;
+    font-family: Theme.font-sans;
+    font-size: Theme.fs-label;
+    font-weight: 600;
+    letter-spacing: 0.6px;
+}
+
+// Pastille de type de fichier (carré 28px avec icône colorée)
+export component FileGlyph inherits Rectangle {
+    in property <string> family: "data";   // data | doc | pdf | code | image
+    in property <length> size: 28px;
+    width: size;
+    height: size;
+    border-radius: Theme.radius-sm;
+    background: Theme.surface-2;
+    Icon {
+        size: root.size * 0.57;
+        data: family == "data" ? Icons.table : Icons.file;
+        tint: family == "data" ? Theme.ft-data
+            : family == "pdf" ? Theme.ft-pdf
+            : family == "code" ? Theme.ft-code
+            : family == "image" ? Theme.ft-image
+            : Theme.ft-doc;
+    }
+}
+
+// Champ de saisie monoligne stylé (recherche, filtres)
+export component TextField inherits Rectangle {
+    in property <string> placeholder;
+    in property <string> icon;
+    in-out property <string> text <=> input.text;
+    out property <bool> has-focus: input.has-focus;
+    callback edited(text: string);
+    callback accepted(text: string);
+
+    height: 34px;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: input.has-focus ? Theme.accent : Theme.border;
+    background: Theme.surface;
+
+    public function focus-input() { input.focus(); }
+
+    HorizontalLayout {
+        padding-left: Theme.space-3;
+        padding-right: Theme.space-3;
+        spacing: Theme.space-2;
+        if icon != "": Icon {
+            y: (parent.height - self.height) / 2;
+            data: icon;
+            size: 16px;
+            tint: input.has-focus ? Theme.accent : Theme.ink-muted;
+        }
+        Rectangle {
+            horizontal-stretch: 1;
+            if input.text == "": Text {
+                x: 0;
+                width: parent.width;
+                text: root.placeholder;
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+                vertical-alignment: center;
+                overflow: elide;
+            }
+            input := TextInput {
+                width: parent.width;
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+                vertical-alignment: center;
+                single-line: true;
+                selection-background-color: Theme.accent-soft;
+                selection-foreground-color: Theme.ink;
+                edited => { root.edited(self.text); }
+                accepted => { root.accepted(self.text); }
+            }
+        }
+    }
+}
+
+// Indicateur d'activité discret (point qui pulse)
+export component BusyDot inherits Rectangle {
+    in property <bool> running: true;
+    width: 8px;
+    height: 8px;
+    border-radius: 4px;
+    background: Theme.accent;
+    opacity: running ? (mod(animation-tick() / 1ms, 1200) < 600 ? 1 : 0.3) : 0;
+}
+
+export component Divider inherits Rectangle {
+    background: Theme.border;
+    height: 1px;
+}
+
+export component VDivider inherits Rectangle {
+    background: Theme.border;
+    width: 1px;
+}

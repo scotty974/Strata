@@ -1,0 +1,110 @@
+// Jetons de design de Strata : couleurs (clair / sombre), typo, espacements, rayons.
+// Toute couleur ou taille de l'interface doit venir d'ici.
+import { Palette } from "std-widgets.slint";
+
+export global Theme {
+    // Suit le thème du système. Peut être forcé depuis Rust : Theme.set_dark(true).
+    in-out property <bool> dark: Palette.color-scheme == ColorScheme.dark;
+
+    // Fonds
+    out property <color> bg:            dark ? #0e0e10 : #f6f6f4;   // fenêtre
+    out property <color> surface:       dark ? #161619 : #ffffff;   // panneaux de travail
+    out property <color> surface-2:     dark ? #1e1e22 : #efefec;   // sidebar, en-têtes, survol
+    out property <color> border:        dark ? #2a2a2f : #e3e3df;   // traits 1px
+    out property <color> border-strong: dark ? #6c6c75 : #8e8e94;   // contours de contrôles (3:1)
+
+    // Texte
+    out property <color> ink:           dark ? #ededef : #18181b;
+    out property <color> ink-muted:     dark ? #9b9ba4 : #64646b;
+
+    // Accent unique
+    out property <color> accent:        dark ? #3cc9a6 : #0b7a64;
+    out property <color> accent-ink:    dark ? #06231c : #ffffff;
+    out property <color> accent-soft:   dark ? #123029 : #e2f2ed;
+    out property <color> accent-text:   dark ? #5fdcbc : #085e4d;
+
+    // Familles de fichiers (icônes et pastilles uniquement)
+    out property <color> ft-doc:        dark ? #6b9bff : #2563eb;
+    out property <color> ft-pdf:        dark ? #f87171 : #dc2626;
+    out property <color> ft-data:       dark ? #f5a524 : #c2690a;
+    out property <color> ft-code:       dark ? #a78bfa : #7c3aed;
+    out property <color> ft-image:      dark ? #38bdf8 : #0891b2;
+
+    // États
+    out property <color> warn:          dark ? #f5b041 : #a15c00;
+    out property <color> warn-soft:     dark ? #2e2412 : #fdf3e1;
+    out property <color> danger:        dark ? #f87171 : #c02626;
+    out property <color> close-hover:   #c42b1c;
+
+    // Typo
+    out property <string> font-sans: "Inter";
+    out property <string> font-mono: "JetBrains Mono";
+    out property <length> fs-display: 28px;
+    out property <length> fs-title: 18px;
+    out property <length> fs-heading: 14px;
+    out property <length> fs-body: 13px;
+    out property <length> fs-small: 12px;
+    out property <length> fs-label: 11px;
+
+    // Espacements (grille de 4px)
+    out property <length> space-1: 4px;
+    out property <length> space-2: 8px;
+    out property <length> space-3: 12px;
+    out property <length> space-4: 16px;
+    out property <length> space-6: 24px;
+    out property <length> space-8: 32px;
+
+    // Rayons
+    out property <length> radius-sm: 6px;
+    out property <length> radius-md: 8px;
+    out property <length> radius-lg: 12px;
+    out property <length> radius-full: 999px;
+
+    // Dimensions récurrentes
+    out property <length> titlebar-height: 44px;
+    out property <length> sidebar-width: 216px;
+    out property <length> control-height: 30px;
+    out property <length> row-height: 30px;
+}
+
+// Icônes au trait, grille 24x24 (même jeu que la maquette).
+export global Icons {
+    out property <string> search: "M 11 4 A 7 7 0 1 0 11 18 A 7 7 0 1 0 11 4 Z M 20 20 L 16.5 16.5";
+    out property <string> home: "M 4 11 L 12 4 L 20 11 L 20 19 C 20 19.6 19.6 20 19 20 L 15 20 L 15 14 L 9 14 L 9 20 L 5 20 C 4.4 20 4 19.6 4 19 Z";
+    out property <string> table: "M 5 4 L 19 4 C 20.1 4 21 4.9 21 6 L 21 18 C 21 19.1 20.1 20 19 20 L 5 20 C 3.9 20 3 19.1 3 18 L 3 6 C 3 4.9 3.9 4 5 4 Z M 3 10 L 21 10 M 9 4 L 9 20";
+    out property <string> spark: "M 12 3 C 12.6 7.5 14.5 9.4 21 12 C 14.5 14.6 12.6 16.5 12 21 C 11.4 16.5 9.5 14.6 3 12 C 9.5 9.4 11.4 7.5 12 3 Z";
+    out property <string> folder: "M 3 7 C 3 5.9 3.9 5 5 5 L 9 5 L 11 7 L 19 7 C 20.1 7 21 7.9 21 9 L 21 17 C 21 18.1 20.1 19 19 19 L 5 19 C 3.9 19 3 18.1 3 17 Z";
+    out property <string> file: "M 14 3 L 7 3 C 5.9 3 5 3.9 5 5 L 5 19 C 5 20.1 5.9 21 7 21 L 17 21 C 18.1 21 19 20.1 19 19 L 19 8 Z M 14 3 L 14 8 L 19 8";
+    out property <string> clock: "M 12 3 A 9 9 0 1 0 12 21 A 9 9 0 1 0 12 3 Z M 12 7 L 12 12 L 15 14";
+    out property <string> settings: "M 4 6 L 14 6 M 18 6 L 20 6 M 4 12 L 8 12 M 12 12 L 20 12 M 4 18 L 16 18 M 16 4 A 2 2 0 1 0 16 8 A 2 2 0 1 0 16 4 Z M 10 10 A 2 2 0 1 0 10 14 A 2 2 0 1 0 10 10 Z M 18 16 A 2 2 0 1 0 18 20 A 2 2 0 1 0 18 16 Z";
+    out property <string> play: "M 7 5 L 19 12 L 7 19 Z";
+    out property <string> export: "M 12 4 L 12 15 M 7 9 L 12 4 L 17 9 M 5 15 L 5 19 C 5 19.6 5.4 20 6 20 L 18 20 C 18.6 20 19 19.6 19 19 L 19 15";
+    out property <string> upload: "M 12 16 L 12 4 M 7 9 L 12 4 L 17 9 M 4 16 L 4 19 C 4 19.6 4.4 20 5 20 L 19 20 C 19.6 20 20 19.6 20 19 L 20 16";
+    out property <string> plus: "M 12 5 L 12 19 M 5 12 L 19 12";
+    out property <string> x: "M 6 6 L 18 18 M 18 6 L 6 18";
+    out property <string> chev-left: "M 15 6 L 9 12 L 15 18";
+    out property <string> chev-right: "M 9 6 L 15 12 L 9 18";
+    out property <string> columns: "M 5 4 L 19 4 C 20.1 4 21 4.9 21 6 L 21 18 C 21 19.1 20.1 20 19 20 L 5 20 C 3.9 20 3 19.1 3 18 L 3 6 C 3 4.9 3.9 4 5 4 Z M 9 4 L 9 20 M 15 4 L 15 20";
+    out property <string> info: "M 12 3 A 9 9 0 1 0 12 21 A 9 9 0 1 0 12 3 Z M 12 11 L 12 16 M 12 8 L 12 8.01";
+    out property <string> shield: "M 12 3 L 20 6 L 20 12 C 20 16.5 16.6 20 12 21 C 7.4 20 4 16.5 4 12 L 4 6 Z";
+    out property <string> alert: "M 12 4 L 21 20 L 3 20 Z M 12 10 L 12 14 M 12 17 L 12 17.01";
+    out property <string> check: "M 5 12 L 10 17 L 19 7";
+    out property <string> min: "M 6 12 L 18 12";
+    out property <string> max: "M 6 6 L 18 6 L 18 18 L 6 18 Z";
+    out property <string> restore: "M 8 8 L 8 6 L 18 6 L 18 16 L 16 16 M 6 8 L 16 8 L 16 18 L 6 18 Z";
+    out property <string> diff: "M 7 4 L 7 20 M 4 7 L 10 7 M 17 4 L 17 20 M 14 17 L 20 17";
+}
+
+// Formatage d'affichage (purement visuel)
+export global Format {
+    pure function pad3(n: int) -> string {
+        return n < 10 ? "00\{n}" : n < 100 ? "0\{n}" : "\{n}";
+    }
+    // 1284302 -> "1 284 302"
+    public pure function thousands(n: int) -> string {
+        if (n < 1000) { return "\{n}"; }
+        if (n < 1000000) { return "\{floor(n / 1000)} \{pad3(mod(n, 1000))}"; }
+        if (n < 1000000000) { return "\{floor(n / 1000000)} \{pad3(mod(floor(n / 1000), 1000))} \{pad3(mod(n, 1000))}"; }
+        return "\{floor(n / 1000000000)} \{pad3(mod(floor(n / 1000000), 1000))} \{pad3(mod(floor(n / 1000), 1000))} \{pad3(mod(n, 1000))}";
+    }
+}
