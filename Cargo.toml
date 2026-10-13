@@ -4,11 +4,14 @@ version = "0.1.0"
 edition = "2024"
 
 [dependencies]
-arrow = "60.0.0"
+arrow = "59.3.0"
+datafusion = "55.1.0"
 ignore = "0.4.33"
 mutex = "1.0.2"
-parquet = "60.0.0"
+parquet = "59.3.0"
+rfd = "0.17.2"
 slint = "1.18.1"
+tokio = { version = "1.53.1", features = ["rt-multi-thread"] }
 walkdir = "2.5.0"
 
 

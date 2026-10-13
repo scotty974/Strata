@@ -4,12 +4,11 @@ use std::path::Path;
 
 use slint::{ModelRc, SharedString, VecModel};
 
-use crate::core::data::{FileSummary, Row};
+use crate::core::data::{ColumnSummary, FileSummary, Row};
 use crate::{ColumnInfo, FileTab, KeyValue};
 
-pub fn columns(summary: &FileSummary) -> ModelRc<ColumnInfo> {
-    let items: Vec<ColumnInfo> = summary
-        .columns
+pub fn columns(columns: &[ColumnSummary]) -> ModelRc<ColumnInfo> {
+    let items: Vec<ColumnInfo> = columns
         .iter()
         .map(|c| ColumnInfo {
             name: c.name.clone().into(),

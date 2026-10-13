@@ -67,11 +67,15 @@ Accès en Rust : `ui.global::<StudioState>()`. Les noms passent en snake_case
 | `tab-selected(i)`, `tab-closed(i)` | callback | L'UI met déjà `active-tab` à jour au clic |
 | `view` | in-out | `StudioView::Data`, `Schema`, `Metadata` |
 | `columns` | in | `[ColumnInfo]` : `name`, `data_type`, `nullable`, `null_ratio` (0 à 1), `summary` |
+| `file-rows` | in | Nombre de lignes du fichier (pied du panneau Schéma) |
+| `grid-columns` | in | Colonnes de la grille : celles du fichier, ou celles du résultat SQL |
+| `showing-query` | in | Vrai quand la grille affiche un résultat SQL (puce « Résultat SQL ») |
+| `query-cleared()` | callback | Croix de la puce « Résultat SQL » : revenir aux lignes du fichier |
 | `selected-column`, `selected-row` | in-out | Sélection partagée entre schéma et grille |
 | `metadata` | in | `[KeyValue]` pour la vue Métadonnées |
 | `rows` | in | `[[string]]` : uniquement la page courante, une cellule texte par colonne |
 | `null-marker` | in | Une cellule égale à cette valeur s'affiche `null` en orange |
-| `total-rows`, `page-index`, `page-size`, `page-count` | in | Pagination (`page-index` commence à 0) |
+| `total-rows`, `page-index`, `page-size`, `page-count` | in | Pagination de ce qu'affiche la grille (`page-index` commence à 0) |
 | `page-requested(i)` | callback | Flèches précédente / suivante |
 | `query` | in-out | Texte de l'éditeur SQL |
 | `query-running`, `query-error`, `query-info` | in | État de la requête |

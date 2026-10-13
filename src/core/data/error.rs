@@ -3,6 +3,7 @@
 use std::fmt;
 
 use arrow::error::ArrowError;
+use datafusion::error::DataFusionError;
 use parquet::errors::ParquetError;
 
 #[derive(Debug)]
@@ -10,6 +11,9 @@ pub enum DataError {
     Io(std::io::Error),
     Parquet(ParquetError),
     Arrow(ArrowError),
+    Sql(DataFusionError),
+    /// Extension non prise en charge.
+    Unsupported(String),
 }
 
 impl fmt::Display for DataError {
@@ -18,6 +22,8 @@ impl fmt::Display for DataError {
             DataError::Io(e) => write!(f, "Impossible d'ouvrir le fichier : {e}"),
             DataError::Parquet(e) => write!(f, "Fichier Parquet illisible : {e}"),
             DataError::Arrow(e) => write!(f, "Erreur de conversion : {e}"),
+            DataError::Sql(e) => write!(f, "{e}"),
+            DataError::Unsupported(ext) => write!(f, "Format non pris en charge : {ext}"),
         }
     }
 }
@@ -37,6 +43,11 @@ impl From<ParquetError> for DataError {
 impl From<ArrowError> for DataError {
     fn from(e: ArrowError) -> Self {
         DataError::Arrow(e)
+    }
+}
+impl From<DataFusionError> for DataError {
+    fn from(e: DataFusionError) -> Self {
+        DataError::Sql(e)
     }
 }
 

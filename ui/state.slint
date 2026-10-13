@@ -53,9 +53,18 @@ export global StudioState {
     // Vue courante (Données / Schéma / Métadonnées)
     in-out property <StudioView> view: StudioView.data;
 
-    // Schéma du fichier actif
+    // Schéma du fichier actif (panneau Schéma, vue Schéma)
     in property <[ColumnInfo]> columns: [];
     in-out property <int> selected-column: -1;
+    // Nombre de lignes du fichier (pied du panneau Schéma)
+    in property <int> file-rows: 0;
+
+    // Colonnes de la grille : celles du fichier, ou celles du résultat SQL
+    in property <[ColumnInfo]> grid-columns: [];
+    // Vrai quand la grille affiche le résultat d'une requête
+    in property <bool> showing-query: false;
+    // Bouton « Revenir au fichier »
+    callback query-cleared();
 
     // Métadonnées (lignes clé / valeur : format, compression, row groups, taille...)
     in property <[KeyValue]> metadata: [];
@@ -66,7 +75,7 @@ export global StudioState {
     in property <string> null-marker: "␀";
     in-out property <int> selected-row: -1;
 
-    // Pagination
+    // Pagination (porte sur ce qu'affiche la grille : fichier ou résultat SQL)
     in property <int> total-rows: 0;
     in property <int> page-index: 0;       // commence à 0
     in property <int> page-size: 200;

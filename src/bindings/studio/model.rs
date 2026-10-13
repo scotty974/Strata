@@ -3,6 +3,7 @@
 use std::path::{Path, PathBuf};
 
 use crate::core::data::FileSummary;
+use crate::core::sql::QueryResult;
 
 pub struct OpenFile {
     pub path: PathBuf,
@@ -13,6 +14,8 @@ pub struct OpenFile {
 pub struct StudioModel {
     pub files: Vec<OpenFile>,
     pub active: Option<usize>,
+    /// Résultat SQL affiché dans la grille (None = la grille montre le fichier).
+    pub query: Option<QueryResult>,
 }
 
 impl StudioModel {

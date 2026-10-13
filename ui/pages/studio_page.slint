@@ -1,13 +1,40 @@
 // Data Studio : onglets de fichiers, schéma, SQL, grille / schéma détaillé / métadonnées.
 import { ListView } from "std-widgets.slint";
 import { Theme, Icons, Format } from "../theme.slint";
-import { Button, ButtonVariant, Segmented, Badge, SectionLabel } from "../components/primitives.slint";
+import { Button, ButtonVariant, Segmented, Badge, SectionLabel, Icon } from "../components/primitives.slint";
 import { FileTabs, DropZone } from "../components/common.slint";
 import { DataGrid } from "../components/data_grid.slint";
 import { SchemaPanel } from "../components/schema_panel.slint";
 import { SqlEditor } from "../components/sql_editor.slint";
 import { AppState, HomeState, StudioState } from "../state.slint";
 import { StudioView } from "../types.slint";
+
+// Indique que la grille montre un résultat SQL ; la croix revient aux lignes du fichier.
+component QueryChip inherits Rectangle {
+    height: 24px;
+    width: chip-row.preferred-width;
+    border-radius: Theme.radius-full;
+    background: t.has-hover ? Theme.accent-soft.darker(4%) : Theme.accent-soft;
+
+    chip-row := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 6px;
+        spacing: 4px;
+        Text {
+            text: "Résultat SQL";
+            color: Theme.accent-text;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+        Icon { y: (parent.height - self.height) / 2; size: 12px; data: Icons.x; tint: Theme.accent-text; }
+    }
+    t := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { StudioState.query-cleared(); }
+    }
+}
 
 // Barre d'outils au-dessus de la grille
 component StudioToolbar inherits Rectangle {
@@ -31,7 +58,12 @@ component StudioToolbar inherits Rectangle {
             }
         }
 
-        if StudioState.view == StudioView.data: Text {
+        if StudioState.view == StudioView.data && StudioState.showing-query: QueryChip {
+            y: (parent.height - self.height) / 2;
+        }
+        if StudioState.view == StudioView.data && !StudioState.showing-query: Text {
+            horizontal-stretch: 1;
+            overflow: elide;
             text: "Lignes \{Format.thousands(first)} à \{Format.thousands(last)} sur \{Format.thousands(StudioState.total-rows)}";
             color: Theme.ink-muted;
             font-family: Theme.font-sans;
@@ -40,8 +72,8 @@ component StudioToolbar inherits Rectangle {
         }
         Rectangle { horizontal-stretch: 1; }
 
-        // Pagination
-        if StudioState.view == StudioView.data: HorizontalLayout {
+        // Pagination (masquée s'il n'y a qu'une page)
+        if StudioState.view == StudioView.data && StudioState.page-count > 1: HorizontalLayout {
             spacing: 4px;
             Button {
                 y: (parent.height - self.height) / 2;
@@ -181,7 +213,7 @@ export component StudioPage inherits Rectangle {
                 width: 264px;
                 columns: StudioState.columns;
                 footer: [
-                    { key: "Lignes", value: Format.thousands(StudioState.total-rows) },
+                    { key: "Lignes", value: Format.thousands(StudioState.file-rows) },
                     { key: "Colonnes", value: StudioState.columns.length },
                 ];
                 selected-column <=> StudioState.selected-column;
@@ -198,7 +230,7 @@ export component StudioPage inherits Rectangle {
                 StudioToolbar { }
                 if StudioState.view == StudioView.data: DataGrid {
                     vertical-stretch: 1;
-                    columns: StudioState.columns;
+                    columns: StudioState.grid-columns;
                     rows: StudioState.rows;
                     null-marker: StudioState.null-marker;
                     row-offset: StudioState.page-index * StudioState.page-size;

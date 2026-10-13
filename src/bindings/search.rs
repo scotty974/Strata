@@ -7,6 +7,7 @@ use std::time::Instant;
 
 use slint::{ComponentHandle, ModelRc, VecModel};
 
+use super::files::open_any;
 use super::indexing::SharedIndex;
 use super::studio::Studio;
 use crate::core::format::{file_family, format_age, format_size};
@@ -45,12 +46,11 @@ pub fn setup(app: &Home, index: SharedIndex, studio: Studio) {
         *query_shown.borrow_mut() = outcome.paths;
     });
 
+    let weak = app.as_weak();
     state.on_result_opened(move |i| {
         let Some(path) = shown.borrow().get(i as usize).cloned() else { return };
-        if is_parquet(&path) {
-            studio.open(&path);
-        } else {
-            eprintln!("ouvrir : {}", path.display());
+        if let Some(app) = weak.upgrade() {
+            open_any(&app, &studio, &path);
         }
     });
 }
@@ -61,10 +61,6 @@ fn info_text(shown: usize, total: usize, elapsed_ms: u128) -> String {
     } else {
         format!("{total} résultats · {elapsed_ms} ms")
     }
-}
-
-fn is_parquet(path: &Path) -> bool {
-    path.extension().is_some_and(|e| e.eq_ignore_ascii_case("parquet"))
 }
 
 /// Convertit un chemin en ligne de résultat pour l'interface.

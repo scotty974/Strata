@@ -3,10 +3,9 @@
 use std::fs::File;
 use std::path::Path;
 
-use arrow::array::Array;
-use arrow::util::display::{ArrayFormatter, FormatOptions};
 use parquet::arrow::arrow_reader::ParquetRecordBatchReaderBuilder;
 
+use super::rows::push_batch_rows;
 use super::{ColumnSummary, DataResult, FileSummary, Row};
 
 /// Lit le schéma et les métadonnées (ne lit que le pied de page du fichier : rapide).
@@ -83,33 +82,10 @@ pub fn read_rows(path: &Path, offset: usize, limit: usize) -> DataResult<Vec<Row
         .with_batch_size(limit.max(1))
         .build()?;
 
-    let options = FormatOptions::default();
     let mut rows = Vec::with_capacity(limit);
-
     for batch in reader {
-        let batch = batch?;
-        let columns: Vec<_> = batch.columns().iter().collect();
-        let formatters = columns
-            .iter()
-            .map(|c| ArrayFormatter::try_new(c.as_ref(), &options))
-            .collect::<Result<Vec<_>, _>>()?;
-
-        for r in 0..batch.num_rows() {
-            let row = columns
-                .iter()
-                .zip(&formatters)
-                .map(|(col, fmt)| {
-                    if col.is_null(r) {
-                        None
-                    } else {
-                        Some(fmt.value(r).to_string())
-                    }
-                })
-                .collect();
-            rows.push(row);
-        }
+        push_batch_rows(&batch?, &mut rows)?;
     }
-
     Ok(rows)
 }
 
