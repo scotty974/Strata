@@ -7,9 +7,8 @@ use std::time::Instant;
 
 use slint::{ComponentHandle, ModelRc, VecModel};
 
+use super::Services;
 use super::files::open_any;
-use super::indexing::SharedIndex;
-use super::studio::Studio;
 use crate::core::format::{file_family, format_age, format_size};
 use crate::core::index::search;
 use crate::{Home, SearchHit, SearchState};
@@ -17,7 +16,8 @@ use crate::{Home, SearchHit, SearchState};
 /// Nombre maximum de résultats envoyés à l'interface.
 const MAX_RESULTS: usize = 200;
 
-pub fn setup(app: &Home, index: SharedIndex, studio: Studio) {
+pub fn setup(app: &Home, services: Services) {
+    let index = services.indexer.index();
     // Chemins des résultats affichés, pour retrouver le fichier au double-clic.
     let shown: Rc<RefCell<Vec<PathBuf>>> = Rc::new(RefCell::new(Vec::new()));
     let state = app.global::<SearchState>();
@@ -46,11 +46,21 @@ pub fn setup(app: &Home, index: SharedIndex, studio: Studio) {
         *query_shown.borrow_mut() = outcome.paths;
     });
 
+    // Clic simple : aperçu dans le panneau de droite
+    let select_shown = shown.clone();
+    let preview = services.preview.clone();
+    state.on_result_selected(move |i| {
+        if let Some(path) = select_shown.borrow().get(i as usize) {
+            preview.show(path);
+        }
+    });
+
+    // Double-clic : ouvrir
     let weak = app.as_weak();
     state.on_result_opened(move |i| {
         let Some(path) = shown.borrow().get(i as usize).cloned() else { return };
         if let Some(app) = weak.upgrade() {
-            open_any(&app, &studio, &path);
+            open_any(&app, &services, &path);
         }
     });
 }
@@ -64,7 +74,7 @@ fn info_text(shown: usize, total: usize, elapsed_ms: u128) -> String {
 }
 
 /// Convertit un chemin en ligne de résultat pour l'interface.
-fn to_search_hit(path: &Path) -> SearchHit {
+pub fn to_search_hit(path: &Path) -> SearchHit {
     let name = path
         .file_name()
         .map(|n| n.to_string_lossy().to_string())

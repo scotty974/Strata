@@ -2,7 +2,7 @@
 import { Theme, Icons } from "../theme.slint";
 import { Icon, SectionLabel, Badge, Button, ButtonVariant } from "primitives.slint";
 import { Page } from "../types.slint";
-import { AppState, StudioState, SearchState } from "../state.slint";
+import { AppState, StudioState, SearchState, IndexState } from "../state.slint";
 
 component NavItem inherits Rectangle {
     in property <string> icon;
@@ -109,6 +109,21 @@ export component SideBar inherits Rectangle {
             clicked => { AppState.page = Page.agent; }
         }
 
+        Rectangle { height: Theme.space-3; }
+        SectionLabel { text: "DOSSIERS INDEXÉS"; height: 24px; vertical-alignment: center; x: Theme.space-2; }
+        for folder[i] in IndexState.folders: NavItem {
+            icon: Icons.folder;
+            label: folder.name;
+            badge: folder.files;
+            clicked => { IndexState.folder-clicked(i); }
+        }
+        NavItem {
+            icon: Icons.plus;
+            label: "Ajouter un dossier";
+            enabled: !IndexState.indexing;
+            clicked => { IndexState.add-folder(); }
+        }
+
         Rectangle { vertical-stretch: 1; }
 
         // Statut de l'index de recherche
@@ -120,7 +135,7 @@ export component SideBar inherits Rectangle {
                 y: (parent.height - self.height) / 2;
                 width: 7px; height: 7px;
                 border-radius: 4px;
-                background: SearchState.indexing ? Theme.warn : Theme.accent;
+                background: IndexState.indexing ? Theme.warn : Theme.accent;
             }
             Text {
                 text: SearchState.index-text;

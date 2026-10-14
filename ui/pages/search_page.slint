@@ -4,6 +4,7 @@ import { Theme, Icons } from "../theme.slint";
 import { Badge, FileGlyph } from "../components/primitives.slint";
 import { SearchBar } from "../components/search_bar.slint";
 import { EmptyState } from "../components/common.slint";
+import { DocumentViewer } from "../components/document_viewer.slint";
 import { SearchState } from "../state.slint";
 import { SearchHit } from "../types.slint";
 
@@ -90,8 +91,11 @@ export component SearchPage inherits Rectangle {
             title: "Aucun résultat";
             message: "Essayez un autre terme ou vérifiez les dossiers indexés.";
         }
-        if SearchState.results.length > 0: Rectangle {
+        if SearchState.results.length > 0: HorizontalLayout {
             vertical-stretch: 1;
+            spacing: Theme.space-4;
+          Rectangle {
+            horizontal-stretch: 1;
             background: Theme.surface;
             border-radius: Theme.radius-md;
             border-width: 1px;
@@ -103,10 +107,23 @@ export component SearchPage inherits Rectangle {
                 for hit[i] in SearchState.results: HitRow {
                     hit: hit;
                     selected: i == root.selected;
-                    clicked => { root.selected = i; }
+                    clicked => {
+                        root.selected = i;
+                        SearchState.result-selected(i);
+                    }
                     double-clicked => { SearchState.result-opened(i); }
                 }
             }
+          }
+          // Aperçu du résultat sélectionné
+          if root.width > 900px: Rectangle {
+            width: min(420px, root.width * 0.4);
+            border-radius: Theme.radius-md;
+            border-width: 1px;
+            border-color: Theme.border;
+            clip: true;
+            DocumentViewer { compact: true; }
+          }
         }
     }
 }

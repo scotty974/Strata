@@ -2,7 +2,7 @@
 // Chaque struct exportée devient une struct Rust du même nom (en snake_case pour les champs),
 // chaque tableau [T] devient un slint::ModelRc<T>.
 
-export enum Page { home, studio, search, agent, settings }
+export enum Page { home, studio, search, agent, settings, preview }
 
 // Vue affichée dans Data Studio
 export enum StudioView { data, schema, metadata }
@@ -45,3 +45,23 @@ export struct SearchHit {
     modified: string,
     snippet: string,    // extrait du contenu, vide si correspondance sur le nom
 }
+
+// Ligne de la palette de commandes
+export struct PaletteItem {
+    group: string,      // titre de section affiché quand il change : "Fichiers", "Actions"
+    title: string,
+    subtitle: string,   // chemin, description
+    icon: string,       // nom d'icône : "file", "table", "folder", "search", "home", "settings", "upload"
+    family: string,     // couleur pour les fichiers : "data" | "doc" | "pdf" | "code" | "image" | ""
+    shortcut: string,   // ex. "Ctrl O", vide sinon
+}
+
+// Dossier indexé (Paramètres + sidebar)
+export struct IndexedFolder {
+    name: string,       // nom court : "Documents"
+    path: string,       // chemin complet
+    files: string,      // nombre déjà formaté : "84 312", ou "…" pendant l'indexation
+}
+
+// Type d'aperçu d'un document
+export enum PreviewKind { none, text, image, pdf, unsupported, error }

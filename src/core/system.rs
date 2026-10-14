@@ -27,3 +27,18 @@ pub fn open_with_default_app(path: &Path) -> io::Result<()> {
 
     command.spawn().map(|_| ())
 }
+
+/// Ouvre l'Explorateur sur le dossier du fichier, avec le fichier sélectionné (Windows).
+pub fn reveal_in_folder(path: &Path) -> io::Result<()> {
+    #[cfg(target_os = "windows")]
+    {
+        Command::new("explorer").arg(format!("/select,{}", path.display())).spawn().map(|_| ())
+    }
+    #[cfg(not(target_os = "windows"))]
+    {
+        match path.parent() {
+            Some(dir) => open_with_default_app(dir),
+            None => Ok(()),
+        }
+    }
+}

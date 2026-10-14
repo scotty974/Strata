@@ -42,13 +42,14 @@ Accès en Rust : `ui.global::<StudioState>()`. Les noms passent en snake_case
 
 | Nom | Sens | Rôle |
 | --- | --- | --- |
-| `page` | in-out | Écran courant (`Page::Home`, `Studio`, `Search`, `Agent`, `Settings`) |
+| `page` | in-out | Écran courant (`Page::Home`, `Studio`, `Search`, `Agent`, `Settings`, `Preview`) |
+| `previous-page` | in-out | Page retrouvée en fermant l'aperçu plein écran |
 | `status-text`, `engine-text` | in | Textes de la barre d'état (gauche, droite) |
 | `busy` | in | Point animé dans la barre d'état |
 | `error-text` | in-out | Bandeau d'erreur sous la barre de titre ; l'utilisateur peut le fermer |
 | `open-file-dialog()` | callback | Bouton « Ouvrir un fichier », « Parcourir… », `+` des onglets, Ctrl+O |
 | `open-path(path)` | callback | Clic sur un fichier récent |
-| `search-requested()` | callback | Ctrl+K ou recherche de la barre de titre (la page Recherche s'ouvre déjà côté UI) |
+| `search-requested()` | callback | Ctrl+K ou recherche de la barre de titre (la palette s'ouvre déjà côté UI) |
 | `start-resize(edge)` | callback | Bords de la fenêtre : `"n"`, `"s"`, `"e"`, `"w"`, `"ne"`, `"nw"`, `"se"`, `"sw"` |
 
 ### HomeState
@@ -91,7 +92,40 @@ Accès en Rust : `ui.global::<StudioState>()`. Les noms passent en snake_case
 | `info` | in | Ex. « 38 résultats · 24 ms » |
 | `indexing`, `index-text` | in | Statut affiché en bas de la sidebar |
 | `query-changed(text)` | callback | À chaque frappe |
+| `result-selected(i)` | callback | Clic simple : aperçu dans le panneau de droite |
 | `result-opened(i)` | callback | Double-clic sur un résultat |
+
+### PaletteState (Ctrl+K)
+
+| Nom | Sens | Rôle |
+| --- | --- | --- |
+| `open` | in-out | Palette affichée (gérée par l'UI) |
+| `query` | in-out | Texte saisi |
+| `items` | in | `[PaletteItem]` : `group`, `title`, `subtitle`, `icon`, `family`, `shortcut` |
+| `current` | in-out | Ligne active (flèches haut / bas) |
+| `query-changed(text)` | callback | À l'ouverture (texte vide) puis à chaque frappe |
+| `activated(i)` | callback | Entrée ou clic ; l'UI ferme ensuite la palette |
+
+### IndexState
+
+| Nom | Sens | Rôle |
+| --- | --- | --- |
+| `folders` | in | `[IndexedFolder]` : `name`, `path`, `files` (texte, « … » pendant l'indexation) |
+| `indexing` | in | Indexation en cours (boutons désactivés) |
+| `add-folder()`, `remove-folder(i)`, `reindex()` | callback | Paramètres et sidebar |
+| `folder-clicked(i)` | callback | Clic sur un dossier dans la sidebar |
+
+### PreviewState
+
+| Nom | Sens | Rôle |
+| --- | --- | --- |
+| `kind` | in | `PreviewKind::None`, `Text`, `Image`, `Pdf`, `Unsupported`, `Error` |
+| `name`, `path`, `info` | in | En-tête de la visionneuse |
+| `text`, `text-truncated` | in | Contenu texte et bandeau « début du fichier seulement » |
+| `image` | in | Image, ou page PDF rendue |
+| `page-index`, `page-count` | in | Navigation PDF |
+| `message`, `loading` | in | Message d'erreur / format non pris en charge, chargement |
+| `page-requested(i)`, `open-external()`, `reveal-in-folder()`, `closed()` | callback | Boutons de la visionneuse |
 
 ### Theme
 

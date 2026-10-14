@@ -1,0 +1,213 @@
+// Palette de commandes : fenêtre flottante ouverte par Ctrl+K.
+// Elle affiche PaletteState.items ; Rust remplit la liste à chaque frappe.
+import { ListView } from "std-widgets.slint";
+import { Theme, Icons } from "../theme.slint";
+import { Icon, Kbd, SectionLabel } from "primitives.slint";
+import { PaletteState } from "../state.slint";
+import { PaletteItem } from "../types.slint";
+
+component PaletteRow inherits Rectangle {
+    in property <PaletteItem> item;
+    in property <bool> active;
+    callback clicked;
+
+    height: 40px;
+    border-radius: Theme.radius-sm;
+    background: active ? Theme.accent-soft : (t.has-hover ? Theme.surface-2 : transparent);
+
+    HorizontalLayout {
+        padding-left: Theme.space-2;
+        padding-right: Theme.space-2;
+        spacing: Theme.space-3;
+        Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: 24px;
+            height: 24px;
+            border-radius: Theme.radius-sm;
+            background: Theme.surface-2;
+            Icon {
+                size: 14px;
+                data: item.icon == "table" ? Icons.table
+                    : item.icon == "folder" ? Icons.folder
+                    : item.icon == "search" ? Icons.search
+                    : item.icon == "home" ? Icons.home
+                    : item.icon == "settings" ? Icons.settings
+                    : item.icon == "upload" ? Icons.upload
+                    : item.icon == "spark" ? Icons.spark
+                    : Icons.file;
+                tint: item.family == "data" ? Theme.ft-data
+                    : item.family == "pdf" ? Theme.ft-pdf
+                    : item.family == "code" ? Theme.ft-code
+                    : item.family == "image" ? Theme.ft-image
+                    : item.family == "doc" ? Theme.ft-doc
+                    : Theme.ink-muted;
+            }
+        }
+        Text {
+            text: item.title;
+            color: active ? Theme.accent-text : Theme.ink;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-body;
+            font-weight: active ? 500 : 400;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        Text {
+            horizontal-stretch: 1;
+            text: item.subtitle;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+            overflow: elide;
+        }
+        if item.shortcut != "": Kbd {
+            y: (parent.height - self.height) / 2;
+            text: item.shortcut;
+        }
+    }
+    t := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component CommandPalette inherits Rectangle {
+    callback close-requested;
+
+    property <int> count: PaletteState.items.length;
+    property <length> row-h: 40px;
+    property <length> group-h: 26px;
+
+    public function focus-input() { input.focus(); }
+
+    function move(delta: int) {
+        if (count == 0) { return; }
+        PaletteState.current = mod(PaletteState.current + delta + count, count);
+    }
+
+    // Voile : un clic à l'extérieur ferme la palette
+    background: #00000040;
+    TouchArea {
+        clicked => { root.close-requested(); }
+    }
+
+    panel := Rectangle {
+        x: (parent.width - self.width) / 2;
+        y: 72px;
+        width: min(parent.width - 48px, 640px);
+        height: min(parent.height - 120px, layout.preferred-height);
+        background: Theme.surface;
+        border-radius: Theme.radius-lg;
+        border-width: 1px;
+        border-color: Theme.border;
+        drop-shadow-blur: 32px;
+        drop-shadow-offset-y: 12px;
+        drop-shadow-color: #00000040;
+        clip: true;
+
+        // Absorbe les clics dans le panneau (ne ferme pas)
+        TouchArea { }
+
+        layout := VerticalLayout {
+            // Champ de saisie
+            Rectangle {
+                height: 52px;
+                HorizontalLayout {
+                    padding-left: Theme.space-4;
+                    padding-right: Theme.space-4;
+                    spacing: Theme.space-3;
+                    Icon { y: (parent.height - self.height) / 2; size: 18px; data: Icons.search; tint: Theme.accent; }
+                    Rectangle {
+                        horizontal-stretch: 1;
+                        if input.text == "": Text {
+                            x: 0;
+                            width: parent.width;
+                            text: "Rechercher un fichier ou une action…";
+                            color: Theme.ink-muted;
+                            font-family: Theme.font-sans;
+                            font-size: 15px;
+                            vertical-alignment: center;
+                        }
+                        input := TextInput {
+                            width: parent.width;
+                            text <=> PaletteState.query;
+                            color: Theme.ink;
+                            font-family: Theme.font-sans;
+                            font-size: 15px;
+                            vertical-alignment: center;
+                            single-line: true;
+                            selection-background-color: Theme.accent-soft;
+                            selection-foreground-color: Theme.ink;
+                            edited => {
+                                PaletteState.current = 0;
+                                PaletteState.query-changed(self.text);
+                            }
+                            accepted => {
+                                if (root.count > 0) {
+                                    PaletteState.activated(PaletteState.current);
+                                    root.close-requested();
+                                }
+                            }
+                            key-pressed(event) => {
+                                if (event.text == Key.Escape) { root.close-requested(); return accept; }
+                                if (event.text == Key.DownArrow) { root.move(1); return accept; }
+                                if (event.text == Key.UpArrow) { root.move(-1); return accept; }
+                                reject
+                            }
+                        }
+                    }
+                    Kbd { y: (parent.height - self.height) / 2; text: "Échap"; }
+                }
+                Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+            }
+
+            // Résultats
+            if count == 0: Text {
+                height: 64px;
+                text: PaletteState.query == "" ? "Tapez pour chercher" : "Aucun résultat";
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+                horizontal-alignment: center;
+                vertical-alignment: center;
+            }
+            if count > 0: VerticalLayout {
+                padding: 6px;
+                spacing: 0px;
+                for item[i] in PaletteState.items: VerticalLayout {
+                    if i == 0 || item.group != PaletteState.items[i - 1].group: SectionLabel {
+                        height: group-h;
+                        x: Theme.space-2;
+                        text: item.group;
+                        vertical-alignment: center;
+                    }
+                    PaletteRow {
+                        item: item;
+                        active: i == PaletteState.current;
+                        clicked => {
+                            PaletteState.current = i;
+                            PaletteState.activated(i);
+                            root.close-requested();
+                        }
+                    }
+                }
+            }
+
+            // Pied
+            Rectangle {
+                height: 32px;
+                background: Theme.surface-2;
+                HorizontalLayout {
+                    padding-left: Theme.space-4;
+                    padding-right: Theme.space-4;
+                    spacing: Theme.space-4;
+                    Text { text: "↑↓ naviguer"; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; vertical-alignment: center; }
+                    Text { text: "↵ ouvrir"; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; vertical-alignment: center; }
+                    Rectangle { horizontal-stretch: 1; }
+                }
+                Rectangle { y: 0; height: 1px; background: Theme.border; }
+            }
+        }
+    }
+}

@@ -8,12 +8,14 @@
 //
 // Convention : "in" = rempli par Rust, "in-out" = l'UI peut aussi le modifier,
 // callback = action de l'utilisateur à traiter en Rust.
-import { Page, StudioView, FileTab, ColumnInfo, KeyValue, RecentFile, SearchHit } from "types.slint";
+import { Page, StudioView, FileTab, ColumnInfo, KeyValue, RecentFile, SearchHit, PaletteItem, IndexedFolder, PreviewKind } from "types.slint";
 
 // État global de l'application
 export global AppState {
     // Navigation (gérée par l'UI, lisible par Rust)
     in-out property <Page> page: Page.home;
+    // Page à retrouver en fermant l'aperçu
+    in-out property <Page> previous-page: Page.home;
 
     // Barre d'état en bas de fenêtre
     in property <string> status-text: "Prêt";
@@ -101,5 +103,50 @@ export global SearchState {
     in property <bool> indexing: false;
     in property <string> index-text: "";    // ex. "248 312 fichiers indexés"
     callback query-changed(text: string);
+    // Clic simple : afficher l'aperçu à droite
+    callback result-selected(index: int);
+    // Double-clic : ouvrir (Studio pour les données, aperçu plein écran sinon)
     callback result-opened(index: int);
+}
+
+// Palette de commandes (Ctrl+K)
+export global PaletteState {
+    in-out property <bool> open: false;
+    in-out property <string> query: "";
+    in property <[PaletteItem]> items: [];
+    in-out property <int> current: 0;
+    // Appelé à l'ouverture (texte vide) puis à chaque frappe
+    callback query-changed(text: string);
+    // Entrée ou clic sur une ligne
+    callback activated(index: int);
+}
+
+// Dossiers indexés
+export global IndexState {
+    in property <[IndexedFolder]> folders: [];
+    in property <bool> indexing: false;
+    callback add-folder();
+    callback remove-folder(index: int);
+    callback reindex();
+    // Clic sur un dossier dans la sidebar
+    callback folder-clicked(index: int);
+}
+
+// Aperçu de document (texte, code, image, PDF)
+export global PreviewState {
+    in property <PreviewKind> kind: PreviewKind.none;
+    in property <string> name;
+    in property <string> path;
+    in property <string> info;            // ex. "PDF · 14 pages · 1,4 Mo"
+    in property <string> text;            // contenu pour kind == text
+    in property <bool> text-truncated;    // vrai si seul le début du fichier est affiché
+    in property <image> image;            // image, ou page PDF rendue
+    in property <int> page-index: 0;      // PDF : page affichée (commence à 0)
+    in property <int> page-count: 0;
+    in property <string> message;         // kind == unsupported / error
+    in property <bool> loading: false;
+    callback page-requested(index: int);
+    callback open-external();
+    callback reveal-in-folder();
+    callback closed();
 }

@@ -2,7 +2,7 @@
 // Toute la donnée passe par les globals de state.slint (voir docs/UI.md).
 import { Theme, Icons } from "theme.slint";
 import { Page } from "types.slint";
-import { AppState, HomeState, StudioState, SearchState } from "state.slint";
+import { AppState, HomeState, StudioState, SearchState, PaletteState, IndexState, PreviewState } from "state.slint";
 import { TitleBar } from "components/title_bar_custom.slint";
 import { SideBar } from "components/side-bar.slint";
 import { StatusBar, ErrorBanner } from "components/common.slint";
@@ -10,10 +10,13 @@ import { HomePage } from "pages/home_page.slint";
 import { StudioPage } from "pages/studio_page.slint";
 import { SearchPage } from "pages/search_page.slint";
 import { PlaceholderPage } from "pages/placeholder_page.slint";
+import { SettingsPage } from "pages/settings_page.slint";
+import { PreviewPage } from "pages/preview_page.slint";
+import { CommandPalette } from "components/command_palette.slint";
 
 // Rendus accessibles depuis Rust : ui.global::<StudioState>(), ColumnInfo { .. }, etc.
-export { Theme, AppState, HomeState, StudioState, SearchState }
-export { Page, StudioView, FileTab, ColumnInfo, KeyValue, RecentFile, SearchHit } from "types.slint";
+export { Theme, AppState, HomeState, StudioState, SearchState, PaletteState, IndexState, PreviewState }
+export { Page, StudioView, FileTab, ColumnInfo, KeyValue, RecentFile, SearchHit, PaletteItem, IndexedFolder, PreviewKind } from "types.slint";
 
 // Poignée de redimensionnement invisible (bords et coins de la fenêtre sans cadre)
 component ResizeHandle inherits TouchArea {
@@ -39,7 +42,20 @@ export component Home inherits Window {
                              : AppState.page == Page.search ? "Recherche"
                              : AppState.page == Page.agent ? "Agent"
                              : AppState.page == Page.settings ? "Paramètres"
+                             : AppState.page == Page.preview ? "Aperçu"
                              : "";
+
+    function open-palette() {
+        PaletteState.query = "";
+        PaletteState.current = 0;
+        PaletteState.open = true;
+        PaletteState.query-changed("");
+    }
+
+    function close-palette() {
+        PaletteState.open = false;
+        keys.focus();
+    }
 
     init => { keys.focus(); }
 
@@ -47,7 +63,7 @@ export component Home inherits Window {
     keys := FocusScope {
         key-pressed(event) => {
             if (event.modifiers.control && (event.text == "k" || event.text == "K")) {
-                AppState.page = Page.search;
+                root.open-palette();
                 AppState.search-requested();
                 return accept;
             }
@@ -66,7 +82,7 @@ export component Home inherits Window {
                 minimize => { root.minimized = true; }
                 close => { root.close(); }
                 search-requested => {
-                    AppState.page = Page.search;
+                    root.open-palette();
                     AppState.search-requested();
                 }
             }
@@ -91,11 +107,8 @@ export component Home inherits Window {
                         title: "Agent local";
                         message: "Bientôt : posez des questions sur vos fichiers à un modèle qui tourne sur votre machine.";
                     }
-                    if AppState.page == Page.settings: PlaceholderPage {
-                        icon: Icons.settings;
-                        title: "Paramètres";
-                        message: "Dossiers indexés, moteur SQL, thème.";
-                    }
+                    if AppState.page == Page.settings: SettingsPage { }
+                    if AppState.page == Page.preview: PreviewPage { }
                 }
             }
 
@@ -107,6 +120,14 @@ export component Home inherits Window {
                 busy: AppState.busy;
             }
         }
+    }
+
+    // Palette de commandes (au-dessus de tout le contenu)
+    if PaletteState.open: CommandPalette {
+        width: root.width;
+        height: root.height;
+        init => { self.focus-input(); }
+        close-requested => { root.close-palette(); }
     }
 
     // Bordure fine (masquée quand la fenêtre est agrandie)

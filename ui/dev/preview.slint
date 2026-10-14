@@ -3,7 +3,7 @@
 // Ce fichier n'est pas compilé par build.rs : il ne sert qu'au design.
 import { Home } from "../app-window.slint";
 import { Page, StudioView } from "../types.slint";
-import { AppState, HomeState, StudioState, SearchState } from "../state.slint";
+import { AppState, HomeState, StudioState, SearchState, IndexState } from "../state.slint";
 import { Theme } from "../theme.slint";
 export { Theme, AppState, HomeState, StudioState, SearchState, Page, StudioView }
 
@@ -24,6 +24,10 @@ export component Preview inherits Home {
         ];
 
         SearchState.index-text = "248 312 fichiers indexés";
+        IndexState.folders = [
+            { name: "Documents", path: "C:\\Users\\fab\\Documents", files: "84 312" },
+            { name: "Projets", path: "C:\\Users\\fab\\Projets", files: "121 004" },
+        ];
 
         StudioState.tabs = [
             { name: "ventes_2026_T3.parquet", path: "C:\\Users\\fab\\Projets\\pipeline-ventes\\data\\gold\\ventes_2026_T3.parquet", kind: "parquet" },

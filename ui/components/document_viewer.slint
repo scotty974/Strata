@@ -1,0 +1,182 @@
+// Visionneuse de documents : texte / code, images, PDF (page par page).
+// Lit PreviewState ; utilisée dans le panneau de la page Recherche et en plein écran.
+import { ScrollView } from "std-widgets.slint";
+import { Theme, Icons } from "../theme.slint";
+import { Button, ButtonVariant, Icon } from "primitives.slint";
+import { EmptyState } from "common.slint";
+import { PreviewState } from "../state.slint";
+import { PreviewKind } from "../types.slint";
+
+export component DocumentViewer inherits Rectangle {
+    // Vrai dans le panneau latéral (en-tête plus compact, pas de bouton fermer)
+    in property <bool> compact: false;
+    callback close-clicked;
+
+    background: Theme.bg;
+
+    VerticalLayout {
+        // ---- En-tête
+        if PreviewState.kind != PreviewKind.none: Rectangle {
+            height: compact ? 56px : 52px;
+            background: Theme.surface;
+            HorizontalLayout {
+                padding-left: Theme.space-4;
+                padding-right: Theme.space-3;
+                spacing: Theme.space-2;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    Text {
+                        text: PreviewState.name;
+                        color: Theme.ink;
+                        font-family: Theme.font-sans;
+                        font-size: compact ? Theme.fs-body : Theme.fs-heading;
+                        font-weight: 600;
+                        overflow: elide;
+                    }
+                    Text {
+                        text: PreviewState.info;
+                        color: Theme.ink-muted;
+                        font-family: Theme.font-sans;
+                        font-size: Theme.fs-small;
+                        overflow: elide;
+                    }
+                }
+                Button {
+                    y: (parent.height - self.height) / 2;
+                    icon: Icons.folder;
+                    variant: ButtonVariant.ghost;
+                    clicked => { PreviewState.reveal-in-folder(); }
+                }
+                Button {
+                    y: (parent.height - self.height) / 2;
+                    text: compact ? "" : "Ouvrir";
+                    icon: Icons.open;
+                    variant: compact ? ButtonVariant.ghost : ButtonVariant.secondary;
+                    clicked => { PreviewState.open-external(); }
+                }
+                if !compact: Button {
+                    y: (parent.height - self.height) / 2;
+                    icon: Icons.x;
+                    variant: ButtonVariant.ghost;
+                    clicked => { root.close-clicked(); }
+                }
+            }
+            Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+        }
+
+        // ---- Contenu
+        Rectangle {
+            vertical-stretch: 1;
+
+            if PreviewState.kind == PreviewKind.none: EmptyState {
+                icon: Icons.file;
+                title: "Aucun aperçu";
+                message: "Sélectionnez un fichier pour l'afficher ici.";
+            }
+
+            if PreviewState.loading: Text {
+                text: "Chargement…";
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+            }
+
+            // Texte et code
+            if !PreviewState.loading && PreviewState.kind == PreviewKind.text: ScrollView {
+                content-width: max(self.visible-width, body.preferred-width + 2 * Theme.space-4);
+                content-height: body.preferred-height + 2 * Theme.space-4;
+                body := Text {
+                    x: Theme.space-4;
+                    y: Theme.space-4;
+                    text: PreviewState.text;
+                    color: Theme.ink;
+                    font-family: Theme.font-mono;
+                    font-size: Theme.fs-small;
+                    wrap: no-wrap;
+                }
+            }
+
+            // Image, ou page PDF rendue
+            if !PreviewState.loading && (PreviewState.kind == PreviewKind.image || PreviewState.kind == PreviewKind.pdf): Rectangle {
+                Rectangle {
+                    x: Theme.space-4;
+                    y: Theme.space-4;
+                    width: parent.width - 2 * Theme.space-4;
+                    height: parent.height - 2 * Theme.space-4 - (PreviewState.kind == PreviewKind.pdf ? 44px : 0px);
+                    Image {
+                        width: parent.width;
+                        height: parent.height;
+                        source: PreviewState.image;
+                        image-fit: contain;
+                    }
+                }
+                // Navigation PDF
+                if PreviewState.kind == PreviewKind.pdf: Rectangle {
+                    y: parent.height - 44px;
+                    height: 44px;
+                    background: Theme.surface;
+                    HorizontalLayout {
+                        alignment: center;
+                        spacing: Theme.space-2;
+                        Button {
+                            y: (parent.height - self.height) / 2;
+                            icon: Icons.chev-left;
+                            variant: ButtonVariant.ghost;
+                            enabled: PreviewState.page-index > 0;
+                            clicked => { PreviewState.page-requested(PreviewState.page-index - 1); }
+                        }
+                        Text {
+                            text: "Page \{PreviewState.page-index + 1} / \{PreviewState.page-count}";
+                            color: Theme.ink;
+                            font-family: Theme.font-sans;
+                            font-size: Theme.fs-small;
+                            vertical-alignment: center;
+                        }
+                        Button {
+                            y: (parent.height - self.height) / 2;
+                            icon: Icons.chev-right;
+                            variant: ButtonVariant.ghost;
+                            enabled: PreviewState.page-index + 1 < PreviewState.page-count;
+                            clicked => { PreviewState.page-requested(PreviewState.page-index + 1); }
+                        }
+                    }
+                    Rectangle { y: 0; height: 1px; background: Theme.border; }
+                }
+            }
+
+            // Format non pris en charge ou erreur
+            if !PreviewState.loading && (PreviewState.kind == PreviewKind.unsupported || PreviewState.kind == PreviewKind.error): VerticalLayout {
+                alignment: center;
+                spacing: Theme.space-4;
+                padding: Theme.space-6;
+                EmptyState {
+                    height: 120px;
+                    icon: PreviewState.kind == PreviewKind.error ? Icons.alert : Icons.file;
+                    title: PreviewState.kind == PreviewKind.error ? "Aperçu impossible" : "Pas d'aperçu pour ce format";
+                    message: PreviewState.message;
+                }
+                HorizontalLayout {
+                    alignment: center;
+                    Button {
+                        text: "Ouvrir avec l'application par défaut";
+                        icon: Icons.open;
+                        clicked => { PreviewState.open-external(); }
+                    }
+                }
+            }
+        }
+
+        // Bandeau « début du fichier seulement »
+        if PreviewState.kind == PreviewKind.text && PreviewState.text-truncated: Rectangle {
+            height: 30px;
+            background: Theme.warn-soft;
+            Text {
+                text: "Seul le début du fichier est affiché.";
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+            }
+        }
+    }
+}
