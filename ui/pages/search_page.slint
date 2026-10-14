@@ -1,0 +1,129 @@
+// Recherche de fichiers dans l'index local.
+import { ListView } from "std-widgets.slint";
+import { Theme, Icons } from "../theme.slint";
+import { Badge, FileGlyph } from "../components/primitives.slint";
+import { SearchBar } from "../components/search_bar.slint";
+import { EmptyState } from "../components/common.slint";
+import { DocumentViewer } from "../components/document_viewer.slint";
+import { SearchState } from "../state.slint";
+import { SearchHit } from "../types.slint";
+
+component HitRow inherits Rectangle {
+    in property <SearchHit> hit;
+    in property <bool> selected;
+    callback clicked;
+    callback double-clicked;
+
+    height: 52px;
+    border-radius: Theme.radius-sm;
+    background: selected ? Theme.accent-soft : (t.has-hover ? Theme.surface-2 : transparent);
+
+    HorizontalLayout {
+        padding-left: Theme.space-2;
+        padding-right: Theme.space-3;
+        spacing: Theme.space-3;
+        FileGlyph { y: (parent.height - self.height) / 2; family: hit.family; }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            Text {
+                text: hit.name;
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+                font-weight: 500;
+                overflow: elide;
+            }
+            Text {
+                text: hit.snippet != "" ? hit.snippet : hit.path;
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+                overflow: elide;
+            }
+        }
+        Badge { y: (parent.height - self.height) / 2; text: hit.kind; }
+        Text { width: 72px; text: hit.size; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; vertical-alignment: center; horizontal-alignment: right; }
+        Text { width: 96px; text: hit.modified; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; vertical-alignment: center; horizontal-alignment: right; }
+    }
+    t := TouchArea {
+        clicked => { root.clicked(); }
+        double-clicked => { root.double-clicked(); }
+    }
+}
+
+export component SearchPage inherits Rectangle {
+    background: Theme.bg;
+    property <int> selected: -1;
+
+    public function focus-input() { bar.focus-input(); }
+
+    VerticalLayout {
+        padding: Theme.space-6;
+        spacing: Theme.space-4;
+
+        bar := SearchBar {
+            text <=> SearchState.query;
+            edited(t) => {
+                root.selected = -1;
+                SearchState.query-changed(t);
+            }
+        }
+        HorizontalLayout {
+            height: 16px;
+            Text {
+                text: SearchState.info;
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+            }
+        }
+
+        if SearchState.query == "": EmptyState {
+            vertical-stretch: 1;
+            icon: Icons.search;
+            title: "Rechercher dans vos fichiers";
+            message: "Tapez un nom de fichier, un mot du contenu ou un nom de colonne.";
+        }
+        if SearchState.query != "" && SearchState.results.length == 0: EmptyState {
+            vertical-stretch: 1;
+            icon: Icons.search;
+            title: "Aucun résultat";
+            message: "Essayez un autre terme ou vérifiez les dossiers indexés.";
+        }
+        if SearchState.results.length > 0: HorizontalLayout {
+            vertical-stretch: 1;
+            spacing: Theme.space-4;
+          Rectangle {
+            horizontal-stretch: 1;
+            background: Theme.surface;
+            border-radius: Theme.radius-md;
+            border-width: 1px;
+            border-color: Theme.border;
+            ListView {
+                x: 4px; y: 4px;
+                width: parent.width - 8px;
+                height: parent.height - 8px;
+                for hit[i] in SearchState.results: HitRow {
+                    hit: hit;
+                    selected: i == root.selected;
+                    clicked => {
+                        root.selected = i;
+                        SearchState.result-selected(i);
+                    }
+                    double-clicked => { SearchState.result-opened(i); }
+                }
+            }
+          }
+          // Aperçu du résultat sélectionné
+          if root.width > 900px: Rectangle {
+            width: min(420px, root.width * 0.4);
+            border-radius: Theme.radius-md;
+            border-width: 1px;
+            border-color: Theme.border;
+            clip: true;
+            DocumentViewer { compact: true; }
+          }
+        }
+    }
+}

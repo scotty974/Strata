@@ -1,0 +1,164 @@
+// Barre de titre personnalisée (fenêtre no-frame).
+// Déplacement : WindowMoveArea (géré par le système). Double-clic : agrandir / restaurer.
+import { Theme, Icons } from "../theme.slint";
+import { Icon, Kbd } from "primitives.slint";
+
+component CaptionButton inherits Rectangle {
+    in property <string> icon;
+    in property <bool> danger: false;
+    callback clicked;
+
+    width: 46px;
+    height: Theme.titlebar-height;
+    background: touch.pressed ? (danger ? Theme.close-hover.darker(15%) : Theme.border)
+              : touch.has-hover ? (danger ? Theme.close-hover : Theme.surface-2)
+              : transparent;
+    animate background { duration: 80ms; }
+
+    Icon {
+        data: icon;
+        stroke-width: 1.2px;
+        tint: (danger && touch.has-hover) ? #ffffff : Theme.ink-muted;
+    }
+
+    touch := TouchArea {
+        clicked => { root.clicked(); }
+    }
+}
+
+component SearchTrigger inherits Rectangle {
+    in property <string> placeholder: "Rechercher fichiers, colonnes, valeurs…";
+    callback clicked;
+
+    height: 30px;
+    border-radius: Theme.radius-md;
+    border-width: 1px;
+    border-color: touch.has-hover ? Theme.border-strong : Theme.border;
+    background: Theme.surface-2;
+
+    HorizontalLayout {
+        padding-left: Theme.space-3;
+        padding-right: 6px;
+        spacing: Theme.space-2;
+
+        Icon {
+            y: (parent.height - self.height) / 2;
+            size: 14px;
+            data: Icons.search;
+        }
+        Text {
+            horizontal-stretch: 1;
+            vertical-alignment: center;
+            text: placeholder;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-body;
+            overflow: elide;
+        }
+        Kbd {
+            y: (parent.height - self.height) / 2;
+            text: "Ctrl K";
+        }
+    }
+
+    touch := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component TitleBar inherits Rectangle {
+    in property <string> app-name: "Strata";
+    in property <string> section: "";
+    in property <bool> maximized: false;
+
+    callback toggle-maximize();
+    callback minimize();
+    callback close();
+    callback search-requested();
+
+    height: Theme.titlebar-height;
+    background: Theme.surface;
+
+    // Zone de déplacement, sous les contrôles
+    WindowMoveArea {
+        TouchArea {
+            double-clicked => { root.toggle-maximize(); }
+        }
+    }
+
+    HorizontalLayout {
+        padding-left: Theme.space-4;
+        spacing: Theme.space-3;
+
+        HorizontalLayout {
+            spacing: Theme.space-2;
+            alignment: start;
+            // Logo : trois strates
+            Rectangle {
+                y: (parent.height - self.height) / 2;
+                width: 22px;
+                height: 22px;
+                border-radius: Theme.radius-sm;
+                background: Theme.accent;
+                Path {
+                    width: 14px;
+                    height: 14px;
+                    viewbox-width: 24;
+                    viewbox-height: 24;
+                    commands: "M 4 7 L 20 7 M 4 12 L 20 12 M 4 17 L 14 17";
+                    stroke: Theme.accent-ink;
+                    stroke-width: 2.4px;
+                    fill: transparent;
+                }
+            }
+            Text {
+                vertical-alignment: center;
+                text: app-name;
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+                font-weight: 600;
+            }
+            if section != "": Text {
+                vertical-alignment: center;
+                text: "/ " + section;
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+            }
+        }
+
+        Rectangle { horizontal-stretch: 1; }
+        SearchTrigger {
+            y: (parent.height - self.height) / 2;
+            min-width: 200px;
+            max-width: 520px;
+            horizontal-stretch: 3;
+            clicked => { root.search-requested(); }
+        }
+        Rectangle { horizontal-stretch: 1; }
+
+        HorizontalLayout {
+            CaptionButton {
+                icon: Icons.min;
+                clicked => { root.minimize(); }
+            }
+            CaptionButton {
+                icon: maximized ? Icons.restore : Icons.max;
+                clicked => { root.toggle-maximize(); }
+            }
+            CaptionButton {
+                icon: Icons.x;
+                danger: true;
+                clicked => { root.close(); }
+            }
+        }
+    }
+
+    Rectangle {
+        y: parent.height - 1px;
+        height: 1px;
+        background: Theme.border;
+    }
+}

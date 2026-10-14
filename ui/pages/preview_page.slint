@@ -1,0 +1,15 @@
+// Aperçu plein écran d'un document.
+import { Theme } from "../theme.slint";
+import { DocumentViewer } from "../components/document_viewer.slint";
+import { AppState, PreviewState } from "../state.slint";
+
+export component PreviewPage inherits Rectangle {
+    background: Theme.bg;
+    DocumentViewer {
+        compact: false;
+        close-clicked => {
+            PreviewState.closed();
+            AppState.page = AppState.previous-page;
+        }
+    }
+}

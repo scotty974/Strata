@@ -1,0 +1,171 @@
+// Grille de données typée. N'affiche QUE la page courante (rows) ; la pagination est faite en Rust.
+// Les lignes sont virtualisées par ListView : seules les lignes visibles sont dessinées.
+import { ListView } from "std-widgets.slint";
+import { Theme } from "../theme.slint";
+import { ColumnInfo } from "../types.slint";
+
+component HeaderCell inherits Rectangle {
+    in property <ColumnInfo> column;
+    in property <bool> selected;
+    callback clicked;
+
+    background: selected ? Theme.accent-soft : (t.has-hover ? Theme.border.transparentize(50%) : transparent);
+
+    VerticalLayout {
+        padding-left: Theme.space-3;
+        padding-right: Theme.space-3;
+        padding-top: 7px;
+        padding-bottom: 6px;
+        spacing: 3px;
+        HorizontalLayout {
+            spacing: Theme.space-2;
+            Text {
+                horizontal-stretch: 1;
+                text: column.name;
+                color: selected ? Theme.accent-text : Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+                font-weight: 600;
+                overflow: elide;
+            }
+            Text {
+                text: column.data-type;
+                color: Theme.ink-muted;
+                font-family: Theme.font-mono;
+                font-size: Theme.fs-label;
+            }
+        }
+        // Part de nulls : barre fine, orange si > 0
+        Rectangle {
+            height: 3px;
+            border-radius: 2px;
+            background: Theme.border;
+            Rectangle {
+                x: 0;
+                width: parent.width * clamp(column.null-ratio, 0, 1);
+                border-radius: 2px;
+                background: Theme.warn;
+            }
+        }
+    }
+    // Séparateur vertical
+    Rectangle { x: parent.width - 1px; width: 1px; background: Theme.border; }
+
+    t := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component DataGrid inherits Rectangle {
+    in property <[ColumnInfo]> columns;
+    in property <[[string]]> rows;
+    in property <string> null-marker: "␀";
+    in property <int> row-offset: 0;            // numéro de la 1re ligne affichée (pagination)
+    in-out property <int> selected-row: -1;
+    in-out property <int> selected-column: -1;
+    in property <length> column-width: 168px;
+    callback row-clicked(index: int);
+    callback column-clicked(index: int);
+
+    property <length> idx-w: 64px;
+    property <length> header-h: 46px;
+    property <length> content-w: idx-w + columns.length * column-width;
+
+    background: Theme.surface;
+    clip: true;
+
+    // ---- En-tête (suit le défilement horizontal de la liste)
+    Rectangle {
+        y: 0;
+        height: header-h;
+        background: Theme.surface-2;
+        clip: true;
+
+        Rectangle {
+            x: list.content-x;
+            width: max(root.width, content-w);
+            Rectangle {
+                x: 0;
+                width: idx-w;
+                Text {
+                    x: parent.width - self.width - Theme.space-3;
+                    text: "#";
+                    color: Theme.ink-muted;
+                    font-family: Theme.font-mono;
+                    font-size: Theme.fs-label;
+                }
+                Rectangle { x: parent.width - 1px; width: 1px; background: Theme.border; }
+            }
+            for col[j] in columns: HeaderCell {
+                x: idx-w + j * column-width;
+                width: column-width;
+                height: header-h;
+                column: col;
+                selected: j == root.selected-column;
+                clicked => {
+                    root.selected-column = j;
+                    root.column-clicked(j);
+                }
+            }
+        }
+        Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+    }
+
+    // ---- Lignes
+    list := ListView {
+        y: header-h;
+        height: root.height - header-h;
+        content-width: max(self.visible-width, content-w);
+
+        for row[i] in rows: Rectangle {
+            height: Theme.row-height;
+            width: max(list.visible-width, content-w);
+            background: i == root.selected-row ? Theme.accent-soft
+                      : rt.has-hover ? Theme.surface-2.transparentize(40%)
+                      : transparent;
+
+            rt := TouchArea {
+                clicked => {
+                    root.selected-row = i;
+                    root.row-clicked(i);
+                }
+            }
+
+            // Numéro de ligne
+            Rectangle {
+                x: 0;
+                width: idx-w;
+                background: i == root.selected-row ? Theme.accent-soft : Theme.surface-2;
+                Text {
+                    x: parent.width - self.width - Theme.space-3;
+                    text: root.row-offset + i + 1;
+                    color: i == root.selected-row ? Theme.accent-text : Theme.ink-muted;
+                    font-family: Theme.font-mono;
+                    font-size: Theme.fs-label;
+                }
+                Rectangle { x: parent.width - 1px; width: 1px; background: Theme.border; }
+            }
+
+            for cell[j] in row: Rectangle {
+                x: idx-w + j * column-width;
+                width: column-width;
+                background: j == root.selected-column && i != root.selected-row ? Theme.accent-soft.transparentize(55%) : transparent;
+                Text {
+                    x: Theme.space-3;
+                    width: parent.width - 2 * Theme.space-3;
+                    text: cell == root.null-marker ? "null" : cell;
+                    color: cell == root.null-marker ? Theme.warn : Theme.ink;
+                    font-italic: cell == root.null-marker;
+                    font-family: Theme.font-mono;
+                    font-size: Theme.fs-small;
+                    vertical-alignment: center;
+                    overflow: elide;
+                }
+                Rectangle { x: parent.width - 1px; width: 1px; background: Theme.border; }
+            }
+
+            Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+        }
+    }
+}

@@ -1,0 +1,152 @@
+// Contrat entre l'interface et Rust.
+//
+// L'interface ne contient AUCUNE logique métier : elle lit les propriétés ci-dessous
+// et déclenche les callbacks. Côté Rust :
+//   let studio = ui.global::<StudioState>();
+//   studio.set_columns(...);
+//   studio.on_run_query(|sql| { ... });
+//
+// Convention : "in" = rempli par Rust, "in-out" = l'UI peut aussi le modifier,
+// callback = action de l'utilisateur à traiter en Rust.
+import { Page, StudioView, FileTab, ColumnInfo, KeyValue, RecentFile, SearchHit, PaletteItem, IndexedFolder, PreviewKind } from "types.slint";
+
+// État global de l'application
+export global AppState {
+    // Navigation (gérée par l'UI, lisible par Rust)
+    in-out property <Page> page: Page.home;
+    // Page à retrouver en fermant l'aperçu
+    in-out property <Page> previous-page: Page.home;
+
+    // Barre d'état en bas de fenêtre
+    in property <string> status-text: "Prêt";
+    in property <string> engine-text: "";          // ex. "DataFusion · 41 ms"
+    in property <bool> busy: false;                 // affiche un indicateur d'activité
+
+    // Message d'erreur global (bandeau rouge sous la barre de titre). Vide = masqué.
+    in-out property <string> error-text: "";
+
+    // Ouvrir le sélecteur de fichier natif (bouton "Ouvrir un fichier", Ctrl+O)
+    callback open-file-dialog();
+    // Ouvrir un chemin précis (fichier récent cliqué, glisser-déposer relayé par Rust)
+    callback open-path(path: string);
+    // Ctrl+K ou clic sur la recherche de la barre de titre
+    callback search-requested();
+    // Redimensionnement de la fenêtre sans cadre : "n", "s", "e", "w", "ne", "nw", "se", "sw"
+    callback start-resize(edge: string);
+}
+
+// Écran d'accueil
+export global HomeState {
+    in property <[RecentFile]> recent-files: [];
+    // Vrai pendant qu'un fichier est survolé au-dessus de la fenêtre (à piloter depuis Rust
+    // avec les évènements de glisser-déposer du système).
+    in property <bool> drop-hover: false;
+    callback clear-recent();
+}
+
+// Data Studio : fichiers ouverts, schéma, grille, SQL
+export global StudioState {
+    // Onglets
+    in property <[FileTab]> tabs: [];
+    in-out property <int> active-tab: -1;
+    callback tab-selected(index: int);
+    callback tab-closed(index: int);
+
+    // Vue courante (Données / Schéma / Métadonnées)
+    in-out property <StudioView> view: StudioView.data;
+
+    // Schéma du fichier actif (panneau Schéma, vue Schéma)
+    in property <[ColumnInfo]> columns: [];
+    in-out property <int> selected-column: -1;
+    // Nombre de lignes du fichier (pied du panneau Schéma)
+    in property <int> file-rows: 0;
+
+    // Colonnes de la grille : celles du fichier, ou celles du résultat SQL
+    in property <[ColumnInfo]> grid-columns: [];
+    // Vrai quand la grille affiche le résultat d'une requête
+    in property <bool> showing-query: false;
+    // Bouton « Revenir au fichier »
+    callback query-cleared();
+
+    // Métadonnées (lignes clé / valeur : format, compression, row groups, taille...)
+    in property <[KeyValue]> metadata: [];
+
+    // Grille : uniquement la page courante. Chaque ligne = une cellule par colonne, en texte.
+    // Une cellule nulle doit valoir exactement null-marker pour être affichée en "null" orange.
+    in property <[[string]]> rows: [];
+    in property <string> null-marker: "␀";
+    in-out property <int> selected-row: -1;
+
+    // Pagination (porte sur ce qu'affiche la grille : fichier ou résultat SQL)
+    in property <int> total-rows: 0;
+    in property <int> page-index: 0;       // commence à 0
+    in property <int> page-size: 200;
+    in property <int> page-count: 0;
+    callback page-requested(index: int);
+
+    // SQL
+    in-out property <string> query: "SELECT *\nFROM t\nLIMIT 200";
+    in property <bool> query-running: false;
+    in property <string> query-error: "";   // vide = pas d'erreur
+    in property <string> query-info: "";    // ex. "1 284 lignes · 41 ms"
+    callback run-query(sql: string);
+
+    // Export du résultat courant : "csv" ou "parquet"
+    callback export-requested(format: string);
+}
+
+// Recherche de fichiers (indexation)
+export global SearchState {
+    in-out property <string> query: "";
+    in property <[SearchHit]> results: [];
+    in property <string> info: "";          // ex. "38 résultats · 24 ms"
+    in property <bool> indexing: false;
+    in property <string> index-text: "";    // ex. "248 312 fichiers indexés"
+    callback query-changed(text: string);
+    // Clic simple : afficher l'aperçu à droite
+    callback result-selected(index: int);
+    // Double-clic : ouvrir (Studio pour les données, aperçu plein écran sinon)
+    callback result-opened(index: int);
+}
+
+// Palette de commandes (Ctrl+K)
+export global PaletteState {
+    in-out property <bool> open: false;
+    in-out property <string> query: "";
+    in property <[PaletteItem]> items: [];
+    in-out property <int> current: 0;
+    // Appelé à l'ouverture (texte vide) puis à chaque frappe
+    callback query-changed(text: string);
+    // Entrée ou clic sur une ligne
+    callback activated(index: int);
+}
+
+// Dossiers indexés
+export global IndexState {
+    in property <[IndexedFolder]> folders: [];
+    in property <bool> indexing: false;
+    callback add-folder();
+    callback remove-folder(index: int);
+    callback reindex();
+    // Clic sur un dossier dans la sidebar
+    callback folder-clicked(index: int);
+}
+
+// Aperçu de document (texte, code, image, PDF)
+export global PreviewState {
+    in property <PreviewKind> kind: PreviewKind.none;
+    in property <string> name;
+    in property <string> path;
+    in property <string> info;            // ex. "PDF · 14 pages · 1,4 Mo"
+    in property <string> text;            // contenu pour kind == text
+    in property <bool> text-truncated;    // vrai si seul le début du fichier est affiché
+    in property <image> image;            // image, ou page PDF rendue
+    in property <int> page-index: 0;      // PDF : page affichée (commence à 0)
+    in property <int> page-count: 0;
+    in property <string> message;         // kind == unsupported / error
+    in property <bool> loading: false;
+    callback page-requested(index: int);
+    callback open-external();
+    callback reveal-in-folder();
+    callback closed();
+}

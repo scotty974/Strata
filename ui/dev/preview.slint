@@ -1,0 +1,86 @@
+// Aperçu avec des données fictives, sans Rust.
+// Ouvrir ce fichier dans l'aperçu Slint de VS Code (extension Slint) ou avec slint-viewer.
+// Ce fichier n'est pas compilé par build.rs : il ne sert qu'au design.
+import { Home } from "../app-window.slint";
+import { Page, StudioView } from "../types.slint";
+import { AppState, HomeState, StudioState, SearchState, IndexState } from "../state.slint";
+import { Theme } from "../theme.slint";
+export { Theme, AppState, HomeState, StudioState, SearchState, Page, StudioView }
+
+export component Preview inherits Home {
+    // Écran affiché au lancement : home, studio, search
+    in property <Page> start-page: Page.studio;
+
+    init => {
+        AppState.page = root.start-page;
+        AppState.status-text = "Prêt";
+        AppState.engine-text = "DataFusion · 41 ms";
+
+        HomeState.recent-files = [
+            { name: "ventes_2026_T3.parquet", path: "C:\\Users\\fab\\Projets\\pipeline-ventes\\data\\gold", kind: "parquet", size: "48,2 Mo", modified: "il y a 2 h" },
+            { name: "clients.csv", path: "C:\\Users\\fab\\Projets\\crm\\exports", kind: "csv", size: "3,1 Mo", modified: "hier" },
+            { name: "events_2026-10.arrow", path: "C:\\Users\\fab\\Downloads", kind: "arrow", size: "212 Mo", modified: "9 oct." },
+            { name: "dvf_2025.parquet", path: "C:\\Users\\fab\\Data\\data.gouv", kind: "parquet", size: "1,2 Go", modified: "2 oct." },
+        ];
+
+        SearchState.index-text = "248 312 fichiers indexés";
+        IndexState.folders = [
+            { name: "Documents", path: "C:\\Users\\fab\\Documents", files: "84 312" },
+            { name: "Projets", path: "C:\\Users\\fab\\Projets", files: "121 004" },
+        ];
+
+        StudioState.tabs = [
+            { name: "ventes_2026_T3.parquet", path: "C:\\Users\\fab\\Projets\\pipeline-ventes\\data\\gold\\ventes_2026_T3.parquet", kind: "parquet" },
+            { name: "clients.csv", path: "C:\\Users\\fab\\Projets\\crm\\exports\\clients.csv", kind: "csv" },
+        ];
+        StudioState.active-tab = 0;
+        StudioState.columns = [
+            { name: "order_id", data-type: "int64", nullable: false, null-ratio: 0, summary: "1 284 302 distinctes" },
+            { name: "date", data-type: "date32", nullable: false, null-ratio: 0, summary: "2026-07-01 → 2026-09-30" },
+            { name: "region", data-type: "utf8", nullable: false, null-ratio: 0, summary: "6 valeurs distinctes" },
+            { name: "client", data-type: "utf8", nullable: false, null-ratio: 0, summary: "4 812 distinctes" },
+            { name: "produit", data-type: "utf8", nullable: false, null-ratio: 0, summary: "148 distinctes" },
+            { name: "quantite", data-type: "int32", nullable: false, null-ratio: 0, summary: "min 1 · max 420" },
+            { name: "montant", data-type: "double", nullable: true, null-ratio: 0.004, summary: "" },
+            { name: "statut", data-type: "utf8", nullable: true, null-ratio: 0.021, summary: "" },
+        ];
+        StudioState.rows = [
+            ["1048211", "2026-07-01", "Île-de-France", "Maison Leroux", "Licence Pro", "3", "1470.00", "livrée"],
+            ["1048212", "2026-07-01", "Grand Est", "Alsatech SAS", "Audit data", "1", "8900.00", "livrée"],
+            ["1048213", "2026-07-02", "La Réunion", "Agri-Sud 974", "Capteurs sol", "40", "12360.00", "en cours"],
+            ["1048214", "2026-07-02", "Occitanie", "Domaine Ferrand", "Licence Pro", "2", "980.00", "␀"],
+            ["1048215", "2026-07-03", "Île-de-France", "Cabinet Morel", "Formation", "6", "4200.00", "livrée"],
+            ["1048216", "2026-07-03", "Auvergne-RA", "Optima Conseil", "Licence Équipe", "12", "␀", "annulée"],
+            ["1048217", "2026-07-04", "Grand Est", "Strasbourg Énergie", "Audit data", "1", "11500.00", "livrée"],
+            ["1048218", "2026-07-04", "Bretagne", "Armor Logistique", "Capteurs sol", "18", "5562.00", "en cours"],
+            ["1048219", "2026-07-05", "Île-de-France", "Néo Finance", "Licence Pro", "5", "2450.00", "livrée"],
+            ["1048220", "2026-07-05", "La Réunion", "Coop Canne Est", "Formation", "9", "6300.00", "livrée"],
+            ["1048221", "2026-07-06", "Occitanie", "Vignobles Arnaud", "Capteurs sol", "24", "7416.00", "livrée"],
+            ["1048222", "2026-07-06", "Grand Est", "Colmar Bois", "Licence Pro", "4", "1960.00", "livrée"],
+            ["1048223", "2026-07-07", "Bretagne", "Port Lorient", "Audit data", "1", "9200.00", "en cours"],
+            ["1048224", "2026-07-07", "Île-de-France", "Studio Nova", "Formation", "3", "2100.00", "livrée"],
+            ["1048225", "2026-07-08", "La Réunion", "Bio Péi", "Capteurs sol", "30", "9270.00", "livrée"],
+            ["1048226", "2026-07-08", "Occitanie", "Toulouse Data", "Licence Équipe", "20", "␀", "livrée"],
+            ["1048227", "2026-07-09", "Grand Est", "Mulhouse Tech", "Licence Pro", "7", "3430.00", "livrée"],
+            ["1048228", "2026-07-09", "Auvergne-RA", "Lyon Conseil", "Audit data", "1", "10800.00", "annulée"],
+        ];
+        StudioState.metadata = [
+            { key: "Format", value: "Parquet (format 2.6)" },
+            { key: "Créé par", value: "parquet-rs version 60.0.0" },
+            { key: "Compression", value: "SNAPPY" },
+            { key: "Row groups", value: "12" },
+            { key: "Lignes", value: "1 284 302" },
+            { key: "Taille", value: "48,2 Mo" },
+        ];
+        StudioState.grid-columns = StudioState.columns;
+        StudioState.file-rows = 1284302;
+        StudioState.total-rows = 1284302;
+        StudioState.page-index = 0;
+        StudioState.page-size = 200;
+        StudioState.page-count = 6422;
+        StudioState.query = "SELECT region, SUM(montant) AS total\nFROM t\nGROUP BY region\nORDER BY total DESC";
+        StudioState.query-info = "6 lignes · 41 ms";
+        StudioState.selected-row = 2;
+        StudioState.selected-column = 2;
+    }
+}

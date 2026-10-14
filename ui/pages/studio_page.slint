@@ -1,0 +1,245 @@
+// Data Studio : onglets de fichiers, schéma, SQL, grille / schéma détaillé / métadonnées.
+import { ListView } from "std-widgets.slint";
+import { Theme, Icons, Format } from "../theme.slint";
+import { Button, ButtonVariant, Segmented, Badge, SectionLabel, Icon } from "../components/primitives.slint";
+import { FileTabs, DropZone } from "../components/common.slint";
+import { DataGrid } from "../components/data_grid.slint";
+import { SchemaPanel } from "../components/schema_panel.slint";
+import { SqlEditor } from "../components/sql_editor.slint";
+import { AppState, HomeState, StudioState } from "../state.slint";
+import { StudioView } from "../types.slint";
+
+// Indique que la grille montre un résultat SQL ; la croix revient aux lignes du fichier.
+component QueryChip inherits Rectangle {
+    height: 24px;
+    width: chip-row.preferred-width;
+    border-radius: Theme.radius-full;
+    background: t.has-hover ? Theme.accent-soft.darker(4%) : Theme.accent-soft;
+
+    chip-row := HorizontalLayout {
+        padding-left: 10px;
+        padding-right: 6px;
+        spacing: 4px;
+        Text {
+            text: "Résultat SQL";
+            color: Theme.accent-text;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            font-weight: 600;
+            vertical-alignment: center;
+        }
+        Icon { y: (parent.height - self.height) / 2; size: 12px; data: Icons.x; tint: Theme.accent-text; }
+    }
+    t := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { StudioState.query-cleared(); }
+    }
+}
+
+// Barre d'outils au-dessus de la grille
+component StudioToolbar inherits Rectangle {
+    height: 44px;
+    background: Theme.surface;
+
+    property <int> first: StudioState.total-rows == 0 ? 0 : StudioState.page-index * StudioState.page-size + 1;
+    property <int> last: min(StudioState.total-rows, (StudioState.page-index + 1) * StudioState.page-size);
+
+    HorizontalLayout {
+        padding-left: Theme.space-4;
+        padding-right: Theme.space-4;
+        spacing: Theme.space-3;
+
+        Segmented {
+            y: (parent.height - self.height) / 2;
+            items: ["Données", "Schéma", "Métadonnées"];
+            current: StudioState.view == StudioView.data ? 0 : StudioState.view == StudioView.schema ? 1 : 2;
+            changed(i) => {
+                StudioState.view = i == 0 ? StudioView.data : i == 1 ? StudioView.schema : StudioView.metadata;
+            }
+        }
+
+        if StudioState.view == StudioView.data && StudioState.showing-query: QueryChip {
+            y: (parent.height - self.height) / 2;
+        }
+        if StudioState.view == StudioView.data && !StudioState.showing-query: Text {
+            horizontal-stretch: 1;
+            overflow: elide;
+            text: "Lignes \{Format.thousands(first)} à \{Format.thousands(last)} sur \{Format.thousands(StudioState.total-rows)}";
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+        }
+        Rectangle { horizontal-stretch: 1; }
+
+        // Pagination (masquée s'il n'y a qu'une page)
+        if StudioState.view == StudioView.data && StudioState.page-count > 1: HorizontalLayout {
+            spacing: 4px;
+            Button {
+                y: (parent.height - self.height) / 2;
+                icon: Icons.chev-left;
+                variant: ButtonVariant.ghost;
+                enabled: StudioState.page-index > 0;
+                clicked => { StudioState.page-requested(StudioState.page-index - 1); }
+            }
+            Text {
+                text: "Page \{Format.thousands(StudioState.page-count == 0 ? 0 : StudioState.page-index + 1)} / \{Format.thousands(StudioState.page-count)}";
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+                vertical-alignment: center;
+            }
+            Button {
+                y: (parent.height - self.height) / 2;
+                icon: Icons.chev-right;
+                variant: ButtonVariant.ghost;
+                enabled: StudioState.page-index + 1 < StudioState.page-count;
+                clicked => { StudioState.page-requested(StudioState.page-index + 1); }
+            }
+        }
+
+        Button {
+            y: (parent.height - self.height) / 2;
+            text: "CSV";
+            icon: Icons.export;
+            clicked => { StudioState.export-requested("csv"); }
+        }
+        Button {
+            y: (parent.height - self.height) / 2;
+            text: "Parquet";
+            icon: Icons.export;
+            clicked => { StudioState.export-requested("parquet"); }
+        }
+    }
+    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+}
+
+// Vue Schéma détaillée (tableau)
+component SchemaTable inherits Rectangle {
+    background: Theme.surface;
+    property <length> c-type: 140px;
+    property <length> c-null: 96px;
+    property <length> c-ratio: 110px;
+    property <length> c-name: 200px;
+
+    VerticalLayout {
+        Rectangle {
+            height: 32px;
+            background: Theme.surface-2;
+            HorizontalLayout {
+                padding-left: Theme.space-4;
+                padding-right: Theme.space-4;
+                spacing: Theme.space-3;
+                SectionLabel { width: 32px; text: "#"; vertical-alignment: center; }
+                SectionLabel { width: c-name; text: "COLONNE"; vertical-alignment: center; }
+                SectionLabel { width: c-type; text: "TYPE"; vertical-alignment: center; }
+                SectionLabel { width: c-null; text: "NULLABLE"; vertical-alignment: center; }
+                SectionLabel { width: c-ratio; text: "NULS"; vertical-alignment: center; }
+                SectionLabel { horizontal-stretch: 1; text: "PROFIL"; vertical-alignment: center; }
+            }
+            Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+        }
+        ListView {
+            vertical-stretch: 1;
+            for col[i] in StudioState.columns: Rectangle {
+                height: 36px;
+                background: i == StudioState.selected-column ? Theme.accent-soft : transparent;
+                HorizontalLayout {
+                    padding-left: Theme.space-4;
+                    padding-right: Theme.space-4;
+                    spacing: Theme.space-3;
+                    Text { width: 32px; text: i + 1; color: Theme.ink-muted; font-family: Theme.font-mono; font-size: Theme.fs-label; vertical-alignment: center; }
+                    Text { width: c-name; text: col.name; color: Theme.ink; font-family: Theme.font-mono; font-size: Theme.fs-small; vertical-alignment: center; overflow: elide; }
+                    Rectangle {
+                        width: c-type;
+                        Badge { x: 0; text: col.data-type; }
+                    }
+                    Text { width: c-null; text: col.nullable ? "oui" : "non"; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; vertical-alignment: center; }
+                    Text {
+                        width: c-ratio;
+                        text: "\{round(col.null-ratio * 1000) / 10} %";
+                        color: col.null-ratio > 0 ? Theme.warn : Theme.ink-muted;
+                        font-family: Theme.font-mono; font-size: Theme.fs-small; vertical-alignment: center;
+                    }
+                    Text { horizontal-stretch: 1; text: col.summary; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; vertical-alignment: center; overflow: elide; }
+                }
+                Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+                TouchArea { clicked => { StudioState.selected-column = i; } }
+            }
+        }
+    }
+}
+
+// Vue Métadonnées (clé / valeur)
+component MetadataList inherits Rectangle {
+    background: Theme.surface;
+    ListView {
+        for kv in StudioState.metadata: Rectangle {
+            height: 34px;
+            HorizontalLayout {
+                padding-left: Theme.space-4;
+                padding-right: Theme.space-4;
+                spacing: Theme.space-4;
+                Text { width: 220px; text: kv.key; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; vertical-alignment: center; overflow: elide; }
+                Text { horizontal-stretch: 1; text: kv.value; color: Theme.ink; font-family: Theme.font-mono; font-size: Theme.fs-small; vertical-alignment: center; overflow: elide; }
+            }
+            Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+        }
+    }
+}
+
+export component StudioPage inherits Rectangle {
+    background: Theme.bg;
+
+    // Aucun fichier ouvert
+    if StudioState.tabs.length == 0: DropZone {
+        width: min(root.width - 64px, 640px);
+        height: 260px;
+        hover: HomeState.drop-hover;
+        browse-clicked => { AppState.open-file-dialog(); }
+    }
+
+    if StudioState.tabs.length > 0: VerticalLayout {
+        FileTabs {
+            tabs: StudioState.tabs;
+            active <=> StudioState.active-tab;
+            selected(i) => { StudioState.tab-selected(i); }
+            closed(i) => { StudioState.tab-closed(i); }
+            add-clicked => { AppState.open-file-dialog(); }
+        }
+        HorizontalLayout {
+            vertical-stretch: 1;
+            SchemaPanel {
+                width: 264px;
+                columns: StudioState.columns;
+                footer: [
+                    { key: "Lignes", value: Format.thousands(StudioState.file-rows) },
+                    { key: "Colonnes", value: StudioState.columns.length },
+                ];
+                selected-column <=> StudioState.selected-column;
+            }
+            VerticalLayout {
+                horizontal-stretch: 1;
+                SqlEditor {
+                    query <=> StudioState.query;
+                    running: StudioState.query-running;
+                    error: StudioState.query-error;
+                    info: StudioState.query-info;
+                    run(sql) => { StudioState.run-query(sql); }
+                }
+                StudioToolbar { }
+                if StudioState.view == StudioView.data: DataGrid {
+                    vertical-stretch: 1;
+                    columns: StudioState.grid-columns;
+                    rows: StudioState.rows;
+                    null-marker: StudioState.null-marker;
+                    row-offset: StudioState.page-index * StudioState.page-size;
+                    selected-row <=> StudioState.selected-row;
+                    selected-column <=> StudioState.selected-column;
+                }
+                if StudioState.view == StudioView.schema: SchemaTable { vertical-stretch: 1; }
+                if StudioState.view == StudioView.metadata: MetadataList { vertical-stretch: 1; }
+            }
+        }
+    }
+}

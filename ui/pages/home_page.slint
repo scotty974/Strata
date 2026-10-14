@@ -1,0 +1,130 @@
+// Accueil : zone de dépôt + fichiers récents.
+import { ListView } from "std-widgets.slint";
+import { Theme, Icons } from "../theme.slint";
+import { Badge, FileGlyph, SectionLabel, Button, ButtonVariant } from "../components/primitives.slint";
+import { DropZone, EmptyState } from "../components/common.slint";
+import { AppState, HomeState } from "../state.slint";
+import { RecentFile } from "../types.slint";
+
+component RecentRow inherits Rectangle {
+    in property <RecentFile> file;
+    callback clicked;
+
+    height: 52px;
+    border-radius: Theme.radius-sm;
+    background: t.has-hover ? Theme.surface-2 : transparent;
+
+    HorizontalLayout {
+        padding-left: Theme.space-2;
+        padding-right: Theme.space-3;
+        spacing: Theme.space-3;
+        FileGlyph { y: (parent.height - self.height) / 2; family: "data"; }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            Text {
+                text: file.name;
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-body;
+                font-weight: 500;
+                overflow: elide;
+            }
+            Text {
+                text: file.path;
+                color: Theme.ink-muted;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-small;
+                overflow: elide;
+            }
+        }
+        Badge { y: (parent.height - self.height) / 2; text: file.kind; }
+        Text {
+            width: 72px;
+            text: file.size;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+        }
+        Text {
+            width: 96px;
+            text: file.modified;
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+            horizontal-alignment: right;
+        }
+    }
+    t := TouchArea {
+        mouse-cursor: pointer;
+        clicked => { root.clicked(); }
+    }
+}
+
+export component HomePage inherits Rectangle {
+    background: Theme.bg;
+
+    HorizontalLayout {
+        alignment: center;
+        padding: Theme.space-8;
+        VerticalLayout {
+            max-width: 880px;
+            horizontal-stretch: 1;
+            spacing: Theme.space-6;
+
+            VerticalLayout {
+                spacing: 4px;
+                Text {
+                    text: "Ouvrir des données";
+                    color: Theme.ink;
+                    font-family: Theme.font-sans;
+                    font-size: Theme.fs-display;
+                    font-weight: 600;
+                    letter-spacing: -0.5px;
+                }
+                Text {
+                    text: "Inspectez le schéma, parcourez les lignes et interrogez vos fichiers en SQL, sans serveur.";
+                    color: Theme.ink-muted;
+                    font-family: Theme.font-sans;
+                    font-size: Theme.fs-body;
+                    wrap: word-wrap;
+                }
+            }
+
+            DropZone {
+                height: 220px;
+                hover: HomeState.drop-hover;
+                browse-clicked => { AppState.open-file-dialog(); }
+            }
+
+            HorizontalLayout {
+                height: 24px;
+                SectionLabel { horizontal-stretch: 1; text: "RÉCENTS"; vertical-alignment: center; }
+                if HomeState.recent-files.length > 0: Button {
+                    y: (parent.height - self.height) / 2;
+                    text: "Effacer";
+                    variant: ButtonVariant.ghost;
+                    clicked => { HomeState.clear-recent(); }
+                }
+            }
+
+            if HomeState.recent-files.length == 0: EmptyState {
+                height: 140px;
+                icon: Icons.clock;
+                title: "Aucun fichier récent";
+                message: "Les fichiers que vous ouvrez apparaîtront ici.";
+            }
+            if HomeState.recent-files.length > 0: ListView {
+                vertical-stretch: 1;
+                min-height: 160px;
+                for f in HomeState.recent-files: RecentRow {
+                    file: f;
+                    clicked => { AppState.open-path(f.path); }
+                }
+            }
+        }
+    }
+}

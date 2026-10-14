@@ -1,0 +1,138 @@
+// Paramètres : dossiers indexés.
+import { ListView } from "std-widgets.slint";
+import { Theme, Icons } from "../theme.slint";
+import { Button, ButtonVariant, Icon, SectionLabel, BusyDot } from "../components/primitives.slint";
+import { EmptyState } from "../components/common.slint";
+import { IndexState, SearchState } from "../state.slint";
+import { IndexedFolder } from "../types.slint";
+
+component FolderRow inherits Rectangle {
+    in property <IndexedFolder> folder;
+    callback remove-clicked;
+
+    height: 52px;
+    background: t.has-hover ? Theme.surface-2 : transparent;
+    t := TouchArea { }
+
+    HorizontalLayout {
+        padding-left: Theme.space-4;
+        padding-right: Theme.space-3;
+        spacing: Theme.space-3;
+        Rectangle {
+            y: (parent.height - self.height) / 2;
+            width: 28px; height: 28px;
+            border-radius: Theme.radius-sm;
+            background: Theme.surface-2;
+            Icon { data: Icons.folder; tint: Theme.accent; }
+        }
+        VerticalLayout {
+            horizontal-stretch: 1;
+            alignment: center;
+            Text { text: folder.name; color: Theme.ink; font-family: Theme.font-sans; font-size: Theme.fs-body; font-weight: 500; overflow: elide; }
+            Text { text: folder.path; color: Theme.ink-muted; font-family: Theme.font-sans; font-size: Theme.fs-small; overflow: elide; }
+        }
+        Text {
+            text: folder.files + " fichiers";
+            color: Theme.ink-muted;
+            font-family: Theme.font-sans;
+            font-size: Theme.fs-small;
+            vertical-alignment: center;
+        }
+        Button {
+            y: (parent.height - self.height) / 2;
+            icon: Icons.x;
+            variant: ButtonVariant.ghost;
+            enabled: !IndexState.indexing;
+            clicked => { root.remove-clicked(); }
+        }
+    }
+    Rectangle { y: parent.height - 1px; height: 1px; background: Theme.border; }
+}
+
+export component SettingsPage inherits Rectangle {
+    background: Theme.bg;
+
+    HorizontalLayout {
+        alignment: center;
+        padding: Theme.space-8;
+        VerticalLayout {
+            max-width: 880px;
+            horizontal-stretch: 1;
+            spacing: Theme.space-4;
+            alignment: start;
+
+            Text {
+                text: "Paramètres";
+                color: Theme.ink;
+                font-family: Theme.font-sans;
+                font-size: Theme.fs-display;
+                font-weight: 600;
+            }
+
+            HorizontalLayout {
+                spacing: Theme.space-3;
+                VerticalLayout {
+                    horizontal-stretch: 1;
+                    alignment: center;
+                    SectionLabel { text: "DOSSIERS INDEXÉS"; }
+                    Text {
+                        text: "Strata parcourt ces dossiers pour la recherche. Les dossiers système, node_modules, target et .git sont ignorés.";
+                        color: Theme.ink-muted;
+                        font-family: Theme.font-sans;
+                        font-size: Theme.fs-small;
+                        wrap: word-wrap;
+                    }
+                }
+                Button {
+                    y: (parent.height - self.height) / 2;
+                    text: "Réindexer";
+                    icon: Icons.refresh;
+                    enabled: !IndexState.indexing && IndexState.folders.length > 0;
+                    clicked => { IndexState.reindex(); }
+                }
+                Button {
+                    y: (parent.height - self.height) / 2;
+                    text: "Ajouter un dossier";
+                    icon: Icons.plus;
+                    variant: ButtonVariant.primary;
+                    enabled: !IndexState.indexing;
+                    clicked => { IndexState.add-folder(); }
+                }
+            }
+
+            Rectangle {
+                height: max(120px, min(IndexState.folders.length * 52px, 420px));
+                background: Theme.surface;
+                border-radius: Theme.radius-md;
+                border-width: 1px;
+                border-color: Theme.border;
+                clip: true;
+
+                if IndexState.folders.length == 0: EmptyState {
+                    icon: Icons.folder;
+                    title: "Aucun dossier indexé";
+                    message: "Ajoutez un dossier pour pouvoir y chercher des fichiers.";
+                }
+                if IndexState.folders.length > 0: ListView {
+                    for folder[i] in IndexState.folders: FolderRow {
+                        folder: folder;
+                        remove-clicked => { IndexState.remove-folder(i); }
+                    }
+                }
+            }
+
+            HorizontalLayout {
+                spacing: Theme.space-2;
+                height: 20px;
+                if IndexState.indexing: BusyDot { y: (parent.height - self.height) / 2; }
+                Text {
+                    text: SearchState.index-text;
+                    color: Theme.ink-muted;
+                    font-family: Theme.font-sans;
+                    font-size: Theme.fs-small;
+                    vertical-alignment: center;
+                }
+            }
+        }
+    }
+}

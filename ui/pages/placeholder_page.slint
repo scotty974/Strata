@@ -1,0 +1,16 @@
+// Page générique pour les écrans pas encore construits (Agent, Paramètres).
+import { Theme, Icons } from "../theme.slint";
+import { EmptyState } from "../components/common.slint";
+
+export component PlaceholderPage inherits Rectangle {
+    in property <string> icon: Icons.info;
+    in property <string> title;
+    in property <string> message;
+    background: Theme.bg;
+    EmptyState {
+        width: min(parent.width - 64px, 420px);
+        icon: root.icon;
+        title: root.title;
+        message: root.message;
+    }
+}
